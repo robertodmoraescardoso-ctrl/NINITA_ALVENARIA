@@ -65,6 +65,37 @@ dois arquivos de `assets/dados/` junto com o PNG — não mexe no banco.
 
 ---
 
+## Quem entra e o que pode fazer
+
+Duas coisas separadas:
+
+1. **A conta** — criada no Supabase, em *Authentication > Users*. Sem
+   conta ninguém entra. O convite por e-mail deixa a pessoa escolher a
+   própria senha.
+2. **O papel** — definido na página, em *Equipes > Quem tem acesso*:
+
+| Papel | Pode |
+|---|---|
+| `admin` | lança e gerencia os papéis |
+| `apontador` | lança execução, prazo e equipes |
+| `gestor` | só acompanha: vê tudo, não grava nada |
+
+A trava é no banco, não só na tela: as regras de acesso (RLS) checam
+o papel antes de aceitar qualquer gravação. Esconder botão protege do
+engano; a regra do banco protege de verdade.
+
+**Quem não está na lista entra como `apontador`.** É de propósito:
+assim ninguém perde acesso quando a migração 002 roda, e não há risco
+de todo mundo ficar trancado do lado de fora. Enquanto a lista estiver
+vazia, qualquer pessoa logada pode criar perfis — então a primeira
+coisa a fazer depois da migração é **se cadastrar como `admin`**.
+
+Remover um perfil aqui não apaga a conta no Supabase: a pessoa volta a
+entrar como apontador. Para tirar o acesso de vez, desative o usuário
+no Supabase.
+
+---
+
 ## Produtividade por equipe
 
 Na aba **Equipes**, a produção é apurada num período que você escolhe

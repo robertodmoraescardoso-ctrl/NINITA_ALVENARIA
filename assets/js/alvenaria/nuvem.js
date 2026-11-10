@@ -112,6 +112,42 @@ export async function lerApontamentos(){
   return r.data || [];
 }
 
+/* ---------- perfis de acesso ---------- */
+
+export async function lerPerfis(){
+  const r = await sb.from("alvenaria_perfis")
+    .select("id,email,nome,papel,ativo,observacao")
+    .is("excluido_em", null)
+    .order("nome");
+  if(r.error) throw r.error;
+  return r.data || [];
+}
+
+export async function gravarPerfil(p){
+  if(p.id){
+    const r = await sb.from("alvenaria_perfis").update({
+      email: String(p.email || "").trim().toLowerCase(),
+      nome: p.nome || "", papel: p.papel, ativo: p.ativo !== false,
+      observacao: p.observacao || "", atualizado_em: new Date().toISOString()
+    }).eq("id", p.id).select().single();
+    if(r.error) throw r.error;
+    return r.data;
+  }
+  const r = await sb.from("alvenaria_perfis").insert({
+    email: String(p.email || "").trim().toLowerCase(),
+    nome: p.nome || "", papel: p.papel || "apontador", observacao: p.observacao || ""
+  }).select().single();
+  if(r.error) throw r.error;
+  return r.data;
+}
+
+export async function apagarPerfil(id){
+  const r = await sb.from("alvenaria_perfis")
+    .update({ excluido_em: new Date().toISOString() })
+    .eq("id", id);
+  if(r.error) throw r.error;
+}
+
 /* ---------- equipes ---------- */
 
 export async function lerEquipes(){

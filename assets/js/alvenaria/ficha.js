@@ -110,10 +110,17 @@ function montar(w, carregando){
         }).join("") + "</tbody></table></div></details>" : "") +
   "</div>" +
 
-  /* O formulário aparece sempre, mesmo sem permissão de gravar.
-     Escondê-lo deixa quem tenta apontar sem nada na tela e sem saber
-     por quê; se a gravação falhar, a mensagem explica o motivo. */
-  blocoApontamento(w, p) + blocoPlanejamento(w, pl, responsaveis) +
+  /* Para quem lança, o formulário aparece sempre — mesmo que a
+     gravação venha a falhar, porque escondê-lo deixa a pessoa sem
+     nada na tela e sem saber por quê; o erro da gravação explica.
+     Para o gestor é diferente: não ver o formulário é o combinado,
+     não uma falha, então vale dizer isso com todas as letras. */
+  (est.papel === "gestor"
+    ? '<div class="alv-bloco-sec alv-ficha__pad"><div class="alv-msg">' +
+        "Seu perfil é de acompanhamento: você vê tudo, mas não lança. " +
+        "Para apontar, peça ao Roberto para mudar seu papel em Equipes &gt; Quem tem acesso." +
+      "</div></div>"
+    : blocoApontamento(w, p) + blocoPlanejamento(w, pl, responsaveis)) +
 
   '<div class="alv-bloco-sec alv-ficha__pad"><h4>Histórico</h4>' +
     (!est.conectado ? '<div class="alv-msg">Entre na obra para ver os lançamentos desta parede.</div>'

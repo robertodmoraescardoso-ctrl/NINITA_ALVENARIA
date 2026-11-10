@@ -41,8 +41,10 @@ export function desenharBarraLote(){
       (semQuant ? " · " + semQuant + " sem quantitativo" : "") + "</span></div>" +
     '<div class="alv-lote__acoes">' +
       '<button type="button" class="btn" id="alvLoteMaterial">Material</button>' +
-      '<button type="button" class="btn" id="alvLotePlanejar">Planejar</button>' +
-      '<button type="button" class="btn btn--marca" id="alvLoteApontar">Apontar</button>' +
+      /* o gestor acompanha e tira a lista de material; não lança */
+      (est.papel === "gestor" ? "" :
+        '<button type="button" class="btn" id="alvLotePlanejar">Planejar</button>' +
+        '<button type="button" class="btn btn--marca" id="alvLoteApontar">Apontar</button>') +
       '<button type="button" class="btn btn--claro" id="alvLoteLimpar" aria-label="Limpar seleção">Limpar</button>' +
     "</div>";
 }

@@ -16,6 +16,9 @@ export const est = {
   situacao: {},      /* "PAV__PRxxx" -> último apontamento */
   plano: {},         /* "PAV__PRxxx" -> {id, responsavel, inicio, fim} */
   equipes: [],       /* [{id, nome, empresa, observacao, ativa}] */
+  perfis: [],        /* [{id, email, nome, papel, ativo}] */
+  papel: "apontador",/* papel de quem está logado: admin, apontador ou gestor */
+  meuEmail: "",
   /* tela */
   pav: "TE", aba: "mapa", vista: "planta", zoom: 3, plantaDe: null, inverter: true,
   filtro: "todas", busca: "", aberta: null,

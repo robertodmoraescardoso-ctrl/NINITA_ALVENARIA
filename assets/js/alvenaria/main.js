@@ -4,10 +4,11 @@ import { abrirApontarLote, abrirMaterialLote, abrirPlanejarLote, definirRepintar
          desenharBarraLote, registrarLote, salvarPlanoLote } from "./lote.js";
 import { alternarSelecao, carregarCatalogo, definirMeuNome, est, hojeISO, limparSelecao,
          percentual, quantasSelecionadas, temArea } from "./modelo.js";
-import { CHAVE_SB, URL_SB, apagarEquipe, cfgLocal, conectar, entrar, gravarEquipe, guardarCfgLocal,
-         lerEquipes, lerPlano, lerSituacao, problemaConfig, sair, sessaoAtual, usuario } from "./nuvem.js";
+import { CHAVE_SB, URL_SB, apagarEquipe, apagarPerfil, cfgLocal, conectar, entrar, gravarEquipe,
+         gravarPerfil, guardarCfgLocal, lerEquipes, lerPerfis, lerPlano, lerSituacao,
+         problemaConfig, sair, sessaoAtual, usuario } from "./nuvem.js";
 import { definirPeriodo, desenharEquipes, desenharFiltros, desenharIndicadores, desenharMaterial,
-         desenharPavimentos, desenharPrazos, desenharProducao } from "./paineis.js";
+         desenharPavimentos, desenharPerfis, desenharPrazos, desenharProducao } from "./paineis.js";
 import { alternarInversao, aplicarZoom, desenharMosaico, desenharPlanta, irAtePeca, mudarZoom, pintarPinos } from "./vistas.js";
 
 /* ------------------------------------------------------------
@@ -93,9 +94,24 @@ async function carregarDaNuvem(){
   est.conectado = true;
   est.podeGravar = true;
   try{
-    const [situacao, plano, equipes] = await Promise.all([
-      lerSituacao(), lerPlano(), lerEquipes()
+    const [situacao, plano, equipes, perfis] = await Promise.all([
+      lerSituacao(), lerPlano(), lerEquipes(), lerPerfis().catch(function(){ return null; })
     ]);
+
+    /* perfis é opcional: enquanto a migração 002 não rodar, a tabela
+       não existe e todo mundo segue apontando, como antes */
+    est.meuEmail = ((usuario && usuario.email) || "").trim().toLowerCase();
+    if(perfis){
+      est.perfis = perfis;
+      const meu = perfis.find(function(p){
+        return String(p.email || "").trim().toLowerCase() === est.meuEmail && p.ativo !== false;
+      });
+      est.papel = meu ? meu.papel : "apontador";
+    } else {
+      est.perfis = [];
+      est.papel = "apontador";
+    }
+    est.podeGravar = est.papel !== "gestor";
     est.situacao = {};
     situacao.forEach(function(s){ est.situacao[s.pavimento + "__" + s.parede] = s; });
     est.plano = {};
@@ -164,8 +180,9 @@ definirRepintarLote(repintar);
 document.addEventListener("click", function(ev){
   const alvo = ev.target.closest(
     "[data-pav],[data-aba],[data-vista],[data-zoom],[data-inverter],[data-filtro],[data-peca]," +
-    "[data-pct],[data-lpct],[data-eqdel],[data-selecionar],[data-periodo]," +
-    "#alvFechar,#alvRegistrar,#alvSalvarPlano,#btnEntrar,#btnSalvarCfg,#alvSair,#alvCortina,#alvEqAdd," +
+    "[data-pct],[data-lpct],[data-eqdel],[data-perfdel],[data-selecionar],[data-periodo]," +
+    "#alvFechar,#alvRegistrar,#alvSalvarPlano,#btnEntrar,#btnSalvarCfg,#alvSair,#alvCortina," +
+    "#alvEqAdd,#alvPerfAdd," +
     "#alvLoteMaterial,#alvLotePlanejar,#alvLoteApontar,#alvLoteLimpar,#alvLoteRegistrar,#alvLoteSalvarPlano");
   if(!alvo) return;
 
@@ -176,6 +193,8 @@ document.addEventListener("click", function(ev){
   }
   if(alvo.id === "alvEqAdd"){ adicionarEquipe(alvo); return; }
   if(alvo.dataset.eqdel){ removerEquipe(alvo.dataset.eqdel); return; }
+  if(alvo.id === "alvPerfAdd"){ adicionarPerfil(alvo); return; }
+  if(alvo.dataset.perfdel){ removerPerfil(alvo.dataset.perfdel); return; }
 
   /* ---- lote ---- */
   if(alvo.dataset.selecionar){
@@ -399,6 +418,58 @@ async function removerEquipe(id){
   }catch(e){
     aviso(erroDeEquipe(e), "erro");
   }
+}
+
+/* ---------- perfis de acesso ---------- */
+async function adicionarPerfil(botao){
+  const email = (($("#alvPerfEmail") || {}).value || "").trim().toLowerCase();
+  const nome = (($("#alvPerfNome") || {}).value || "").trim();
+  const papel = (($("#alvPerfPapel") || {}).value || "apontador");
+  const msg = $("#alvPerfMsg");
+  function diz(t, erro){ if(msg){ msg.className = "alv-msg" + (erro ? " erro" : ""); msg.textContent = t; } }
+
+  if(!email || email.indexOf("@") < 1){ diz("Escreva o e-mail do usuário.", true); return; }
+  if(est.perfis.some(function(p){ return String(p.email||"").toLowerCase() === email; })){
+    diz("Esse e-mail já tem perfil.", true); return;
+  }
+  botao.disabled = true;
+  diz("Gravando…");
+  try{
+    const novo = await gravarPerfil({ email: email, nome: nome, papel: papel });
+    est.perfis.push(novo);
+    est.perfis.sort(function(a,b){ return String(a.nome||a.email).localeCompare(String(b.nome||b.email), "pt-BR"); });
+    if(email === est.meuEmail){ est.papel = novo.papel; est.podeGravar = novo.papel !== "gestor"; }
+    desenharPerfis();
+    aviso("Perfil de " + (nome || email) + " criado como " + papel + ".");
+  }catch(e){
+    diz(erroDePerfil(e), true);
+  }finally{
+    botao.disabled = false;
+  }
+}
+
+async function removerPerfil(id){
+  const p = est.perfis.find(function(x){ return String(x.id) === String(id); });
+  if(!p) return;
+  try{
+    await apagarPerfil(id);
+    est.perfis = est.perfis.filter(function(x){ return String(x.id) !== String(id); });
+    desenharPerfis();
+    aviso("Perfil de " + (p.nome || p.email) + " removido. A conta no Supabase continua existindo.");
+  }catch(e){
+    aviso(erroDePerfil(e), "erro");
+  }
+}
+
+function erroDePerfil(e){
+  const t = String((e && (e.message || e.hint || e.details)) || e || "");
+  if(/relation .* does not exist|schema cache|alvenaria_perfis/i.test(t))
+    return "A tabela de perfis ainda não existe. Rode migracoes/002_perfis.sql no Supabase.";
+  if(/duplicate key|unique/i.test(t)) return "Esse e-mail já tem perfil.";
+  if(/row-level security|permission denied|violates/i.test(t))
+    return "Só um administrador pode mexer nos perfis.";
+  if(/Failed to fetch|NetworkError/i.test(t)) return "Sem conexão. Tente de novo.";
+  return "Não gravou: " + t;
 }
 
 function erroDeEquipe(e){

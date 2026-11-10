@@ -178,7 +178,9 @@ export function definirPeriodo(dias){
 export async function desenharEquipes(){
   const alvo = $("#alvEquipesTela");
   alvo.innerHTML = blocoCadastro() +
-    '<div id="alvEquipesProd"><div class="alv-msg">Carregando lançamentos…</div></div>';
+    '<div id="alvEquipesProd"><div class="alv-msg">Carregando lançamentos…</div></div>' +
+    '<div id="alvPerfis"></div>';
+  desenharPerfis();
   try{ apontamentosLidos = await lerApontamentos(); }
   catch(e){
     apontamentosLidos = null;
@@ -189,6 +191,66 @@ export async function desenharEquipes(){
   }
   if(!est.periodoDe && !est.periodoAte) definirPeriodo(30);
   desenharProducao();
+}
+
+/* ------------------------------------------------------------
+   QUEM TEM ACESSO
+
+   Só o admin vê — com uma exceção: enquanto não existir nenhum
+   perfil, qualquer um vê, senão ninguém conseguiria criar o
+   primeiro admin. É a mesma exceção de arranque que a regra do
+   banco faz na migração 002.
+   ------------------------------------------------------------ */
+export function desenharPerfis(){
+  const destino = $("#alvPerfis");
+  if(!destino) return;
+  const arranque = est.perfis.length === 0;
+  if(est.papel !== "admin" && !arranque){ destino.innerHTML = ""; return; }
+
+  const formulario =
+    '<div class="alv-nova-equipe">' +
+      '<label class="alv-campo"><span>E-mail do usuário</span>' +
+        '<input id="alvPerfEmail" type="email" inputmode="email" autocapitalize="off" ' +
+        'autocomplete="off" placeholder="pessoa@empresa.com"></label>' +
+      '<label class="alv-campo"><span>Nome</span>' +
+        '<input id="alvPerfNome" maxlength="60" placeholder="como chamar" autocomplete="off"></label>' +
+      '<label class="alv-campo"><span>Papel</span><select id="alvPerfPapel">' +
+        '<option value="apontador">Apontador</option>' +
+        '<option value="gestor">Gestor (só acompanha)</option>' +
+        '<option value="admin">Administrador</option>' +
+      "</select></label>" +
+      '<button type="button" class="btn btn--marca" id="alvPerfAdd">Adicionar</button>' +
+    "</div>" +
+    '<div class="alv-msg" id="alvPerfMsg"></div>';
+
+  const lista = est.perfis.length
+    ? '<div class="alv-linhas" style="margin-top:10px">' + est.perfis.map(function(p){
+        const eu = String(p.email || "").trim().toLowerCase() === est.meuEmail;
+        return '<div class="alv-linha">' +
+          '<span class="alv-linha__meio" style="color:var(--texto)">' +
+            "<b>" + esc(p.nome || p.email) + "</b>" + (eu ? " (você)" : "") +
+            '<span style="display:block;color:var(--texto-3);font-size:11.5px">' + esc(p.email) + "</span>" +
+          "</span>" +
+          '<span class="alv-selo ' + (p.papel === "gestor" ? "semquant" : p.papel === "admin" ? "ok" : "andamento") +
+            '">' + esc(p.papel) + "</span>" +
+          (eu ? "" : '<button type="button" class="alv-apagar" data-perfdel="' + esc(p.id) +
+            '" aria-label="Remover ' + esc(p.email) + '">&times;</button>') +
+        "</div>";
+      }).join("") + "</div>"
+    : "";
+
+  destino.innerHTML =
+    '<h2 class="alv-titulo">Quem tem acesso ao sistema</h2>' +
+    (arranque
+      ? '<div class="alv-lote-aviso">Nenhum perfil cadastrado ainda. Enquanto estiver assim, ' +
+        "qualquer pessoa logada entra como apontador e pode criar perfis. " +
+        "<b>Comece cadastrando você mesmo como Administrador</b> — a partir daí só admin mexe aqui.</div>"
+      : "") +
+    formulario + lista +
+    '<div class="alv-msg">Cadastrar aqui define o <b>papel</b> de quem entra. Não cria a conta: ' +
+      "o usuário em si é criado no Supabase, em Authentication &gt; Users. Quem não estiver nesta " +
+      "lista entra como apontador." +
+    "</div>";
 }
 
 export function desenharProducao(){
