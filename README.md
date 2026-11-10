@@ -41,6 +41,7 @@ assets/
     modelo.js           catálogo em memória e regras de situação
     vistas.js           planta de 1ª fiada e mosaico
     ficha.js            ficha da parede e lançamento
+    lote.js             seleção múltipla: material, apontar, planejar
     paineis.js          indicadores, prazos, equipes e material
 migracoes/              scripts SQL do banco, numerados (rodar em ordem)
 ```
@@ -61,6 +62,27 @@ ConstruCode e só mudam quando sai revisão nova.
 No **banco** fica só o que a obra produz: apontamento, planejamento e
 as equipes. Trocar uma prancha por revisão nova significa refazer os
 dois arquivos de `assets/dados/` junto com o PNG — não mexe no banco.
+
+---
+
+## Seleção em lote
+
+No **Mosaico**, o botão *Selecionar várias* entra no modo de seleção:
+cada toque marca ou desmarca uma parede e uma barra no rodapé mostra
+quantas peças e quantos m² estão escolhidos. Dali saem três ações:
+
+- **Material** — quanto bloco e tela a seleção precisa, por SKU, com
+  uma coluna de *falta assentar* que desconta o que já foi apontado.
+  É o número para subir material ao andar.
+- **Apontar** — o mesmo percentual em todas. Cada parede recebe o
+  **seu próprio** lançamento, com a **sua** área: nada vira um
+  registro só, senão a medição por peça e a produtividade por equipe
+  deixam de fechar.
+- **Planejar** — responsável e prazo para todas. Campo em branco não
+  apaga o que já existe.
+
+A seleção vale só no mosaico e zera ao trocar de pavimento — apontar
+em peça que não está na tela é pedido de engano.
 
 ---
 

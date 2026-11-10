@@ -179,17 +179,20 @@ function colunas(w){
 
 function peca(w){
   const p = percentual(w), s = status(w), pl = est.plano[w.id];
+  const escolhida = est.selecionando && !!est.selecao[w.id];
   const marcas = [];
   if(w.avisos) marcas.push('<span class="alv-bloco__alerta" aria-hidden="true">!</span>');
   if(pl && pl.responsavel){
     const iniciais = pl.responsavel.trim().split(/\s+/).map(function(x){ return x[0]; }).join("").slice(0,2).toUpperCase();
     marcas.push("<b>" + esc(iniciais) + "</b>");
   }
-  return '<button type="button" class="alv-bloco ' + s + '" data-peca="' + w.id + '" ' +
-      'style="grid-column:span ' + colunas(w) + '" ' +
+  return '<button type="button" class="alv-bloco ' + s + (escolhida ? " escolhida" : "") +
+      '" data-peca="' + w.id + '" style="grid-column:span ' + colunas(w) + '" ' +
+      (est.selecionando ? 'aria-pressed="' + escolhida + '" ' : "") +
       'aria-label="' + esc(w.codigo + ", " + ROTULO[s] + ", " + p + "%") + '">' +
       '<span class="alv-bloco__fiada' + (p === 0 ? " vazia" : "") + '" ' +
         'style="height:' + p + '%;--alv-c:' + COR[s] + ';--alv-t:' + TINTA[s] + '"></span>' +
+      (escolhida ? '<span class="alv-bloco__check" aria-hidden="true">✓</span>' : "") +
       (marcas.length ? '<span class="alv-bloco__marca">' + marcas.join("") + "</span>" : "") +
       '<span class="alv-bloco__cod">' + esc(w.codigo) + '</span>' +
       '<span class="alv-bloco__m2">' +
@@ -215,7 +218,8 @@ export function desenharMosaico(){
     const feito = arr.reduce(function(s,w){ return s + m2Executado(w); }, 0);
     return '<div class="alv-secao"><div class="alv-secao__cab"><h3>' + titulo + "</h3>" +
       "<span>" + arr.length + (prev > 0 ? " · " + nf(feito,0) + "/" + nf(prev,0) + " m²" : "") + "</span></div>" +
-      '<div class="alv-mosaico">' + arr.map(peca).join("") + "</div></div>";
+      '<div class="alv-mosaico' + (est.selecionando ? " selecionando" : "") + '">' +
+      arr.map(peca).join("") + "</div></div>";
   }
   alvo.innerHTML = secao("Paredes", paredes) + secao("Shafts", shafts);
 }

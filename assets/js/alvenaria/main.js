@@ -1,6 +1,9 @@
 import { $, aviso, esc, fecharModal } from "../ui.js";
 import { abrirFicha, definirRepintar, fecharFicha, registrarApontamento, salvarPlanejamento } from "./ficha.js";
-import { carregarCatalogo, definirMeuNome, est, hojeISO, percentual, temArea } from "./modelo.js";
+import { abrirApontarLote, abrirMaterialLote, abrirPlanejarLote, definirRepintarLote,
+         desenharBarraLote, registrarLote, salvarPlanoLote } from "./lote.js";
+import { alternarSelecao, carregarCatalogo, definirMeuNome, est, hojeISO, limparSelecao,
+         percentual, quantasSelecionadas, temArea } from "./modelo.js";
 import { CHAVE_SB, URL_SB, apagarEquipe, cfgLocal, conectar, entrar, gravarEquipe, guardarCfgLocal,
          lerEquipes, lerPlano, lerSituacao, problemaConfig, sair, sessaoAtual, usuario } from "./nuvem.js";
 import { desenharEquipes, desenharFiltros, desenharIndicadores, desenharMaterial,
@@ -133,8 +136,20 @@ function repintar(){
     Array.prototype.forEach.call(document.querySelectorAll("[data-vista]"), function(b){
       b.setAttribute("aria-pressed", String(b.dataset.vista === est.vista));
     });
+    /* selecionar várias só faz sentido no mosaico: na planta o zoom
+       está sempre em cima de um pedaço, e o lote some da vista */
+    if(naPlanta && est.selecionando){ est.selecionando = false; limparSelecao(); }
+    const bs = $("#alvSelecionar");
+    bs.classList.toggle("oculto", naPlanta);
+    bs.setAttribute("aria-pressed", String(est.selecionando));
+    bs.textContent = est.selecionando
+      ? (quantasSelecionadas() ? "Sair da seleção" : "Cancelar seleção")
+      : "Selecionar várias";
+    bs.classList.toggle("btn--marca", est.selecionando);
     if(naPlanta) desenharPlanta(); else desenharMosaico();
   }
+  if(est.aba !== "mapa" && est.selecionando){ est.selecionando = false; limparSelecao(); }
+  desenharBarraLote();
   if(est.aba === "prazos") desenharPrazos();
   if(est.aba === "material") desenharMaterial();
 
@@ -143,16 +158,42 @@ function repintar(){
   av.classList.toggle("oculto", !est.aviso);
 }
 definirRepintar(repintar);
+definirRepintarLote(repintar);
 
 /* ---------- eventos ---------- */
 document.addEventListener("click", function(ev){
   const alvo = ev.target.closest(
-    "[data-pav],[data-aba],[data-vista],[data-zoom],[data-inverter],[data-filtro],[data-peca],[data-pct],[data-eqdel]," +
-    "#alvFechar,#alvRegistrar,#alvSalvarPlano,#btnEntrar,#btnSalvarCfg,#alvSair,#alvCortina,#alvEqAdd");
+    "[data-pav],[data-aba],[data-vista],[data-zoom],[data-inverter],[data-filtro],[data-peca]," +
+    "[data-pct],[data-lpct],[data-eqdel],[data-selecionar]," +
+    "#alvFechar,#alvRegistrar,#alvSalvarPlano,#btnEntrar,#btnSalvarCfg,#alvSair,#alvCortina,#alvEqAdd," +
+    "#alvLoteMaterial,#alvLotePlanejar,#alvLoteApontar,#alvLoteLimpar,#alvLoteRegistrar,#alvLoteSalvarPlano");
   if(!alvo) return;
 
   if(alvo.id === "alvEqAdd"){ adicionarEquipe(alvo); return; }
   if(alvo.dataset.eqdel){ removerEquipe(alvo.dataset.eqdel); return; }
+
+  /* ---- lote ---- */
+  if(alvo.dataset.selecionar){
+    est.selecionando = !est.selecionando;
+    if(!est.selecionando) limparSelecao();
+    repintar();
+    return;
+  }
+  if(alvo.id === "alvLoteLimpar"){ limparSelecao(); repintar(); return; }
+  if(alvo.id === "alvLoteMaterial"){ abrirMaterialLote(); return; }
+  if(alvo.id === "alvLotePlanejar"){ abrirPlanejarLote(); return; }
+  if(alvo.id === "alvLoteApontar"){ abrirApontarLote(); return; }
+  if(alvo.id === "alvLoteRegistrar"){ registrarLote(alvo); return; }
+  if(alvo.id === "alvLoteSalvarPlano"){ salvarPlanoLote(alvo); return; }
+  if(alvo.dataset.lpct !== undefined){
+    const v = Number(alvo.dataset.lpct);
+    if($("#alvLotePct")) $("#alvLotePct").value = v;
+    if($("#alvLotePctN")) $("#alvLotePctN").value = v;
+    Array.prototype.forEach.call($("#alvFicha").querySelectorAll("[data-lpct]"), function(b){
+      b.setAttribute("aria-pressed", String(Number(b.dataset.lpct) === v));
+    });
+    return;
+  }
 
   if(alvo.id === "alvCortina" || alvo.id === "alvFechar"){ fecharFicha(); return; }
   if(alvo.id === "btnEntrar"){ fazerLogin(); return; }
@@ -163,6 +204,7 @@ document.addEventListener("click", function(ev){
 
   if(alvo.dataset.pav){
     est.pav = alvo.dataset.pav; est.busca = "";
+    limparSelecao();   /* seleção não atravessa pavimento */
     guardarCfgLocal("pav", est.pav);
     repintar();
     window.scrollTo({ top:0, behavior:"smooth" });
@@ -190,7 +232,33 @@ document.addEventListener("click", function(ev){
     return;
   }
   if(alvo.dataset.filtro){ est.filtro = alvo.dataset.filtro; repintar(); return; }
-  if(alvo.dataset.peca){ abrirFicha(alvo.dataset.peca); return; }
+  if(alvo.dataset.peca){
+    /* no mosaico em modo de seleção o toque marca a peça;
+       na planta e fora do modo, abre a ficha como sempre */
+    if(est.selecionando && est.vista === "mosaico" && est.aba === "mapa"){
+      alternarSelecao(alvo.dataset.peca);
+      /* mexe só na peça tocada e na barra: redesenhar o pavimento
+         inteiro a cada toque trava o celular num andar de 189 peças */
+      const marcada = !!est.selecao[alvo.dataset.peca];
+      alvo.classList.toggle("escolhida", marcada);
+      alvo.setAttribute("aria-pressed", String(marcada));
+      let visto = alvo.querySelector(".alv-bloco__check");
+      if(marcada && !visto){
+        visto = document.createElement("span");
+        visto.className = "alv-bloco__check";
+        visto.setAttribute("aria-hidden", "true");
+        visto.textContent = "✓";
+        alvo.appendChild(visto);
+      }
+      if(!marcada && visto) visto.remove();
+      desenharBarraLote();
+      const bs = $("#alvSelecionar");
+      if(bs) bs.textContent = quantasSelecionadas() ? "Sair da seleção" : "Cancelar seleção";
+    } else {
+      abrirFicha(alvo.dataset.peca);
+    }
+    return;
+  }
 
   if(alvo.dataset.pct !== undefined){
     const v = Number(alvo.dataset.pct);
@@ -228,6 +296,17 @@ document.addEventListener("input", function(ev){
     const v = Math.round(m/w.area*100);
     if($("#alvPct")) $("#alvPct").value = v;
     if($("#alvPctN")) $("#alvPctN").value = v;
+  }
+  if(alvo.id === "alvLotePct"){
+    const v = Number(alvo.value);
+    if($("#alvLotePctN")) $("#alvLotePctN").value = v;
+    Array.prototype.forEach.call($("#alvFicha").querySelectorAll("[data-lpct]"), function(b){
+      b.setAttribute("aria-pressed", String(Number(b.dataset.lpct) === v));
+    });
+  }
+  if(alvo.id === "alvLotePctN"){
+    const v = Math.max(0, Math.min(100, Number(alvo.value) || 0));
+    if($("#alvLotePct")) $("#alvLotePct").value = v;
   }
   if(alvo.id === "alvBusca"){
     est.busca = alvo.value;

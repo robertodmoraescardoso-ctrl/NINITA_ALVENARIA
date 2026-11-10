@@ -30,13 +30,19 @@ export async function abrirFicha(id){
   }
 }
 
+/* A ficha da parede e a folha do lote dividem o mesmo elemento e a
+   mesma cortina: nunca ficam abertas ao mesmo tempo, e assim o fechar
+   é um só. */
 export function fecharFicha(){
   est.aberta = null;
+  est.loteAberto = false;
   const f = $("#alvFicha"), c = $("#alvCortina");
   if(f) f.classList.remove("ver");
   if(c) c.classList.remove("ver");
-  setTimeout(function(){ if(!est.aberta && f) f.hidden = true; }, 240);
+  setTimeout(function(){ if(!est.aberta && !est.loteAberto && f) f.hidden = true; }, 240);
 }
+
+export function mostrarFolha(){ mostrar(); }
 
 function mostrar(){
   const f = $("#alvFicha"), c = $("#alvCortina");

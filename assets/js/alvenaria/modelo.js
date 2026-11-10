@@ -19,6 +19,9 @@ export const est = {
   /* tela */
   pav: "TE", aba: "mapa", vista: "planta", zoom: 3, plantaDe: null, inverter: true,
   filtro: "todas", busca: "", aberta: null,
+  /* seleção em lote, só no mosaico. Zera ao trocar de pavimento:
+     apontar em peça que não está na tela é pedido de engano. */
+  selecionando: false, selecao: {}, loteAberto: false,
   conectado: false, podeGravar: false, aviso: ""
 };
 
@@ -128,6 +131,41 @@ export function visiveis(){
 let _meuNome = "";
 export function meuNome(){ return _meuNome; }
 export function definirMeuNome(n){ _meuNome = n || ""; }
+
+/* ---------- seleção em lote ---------- */
+
+export function selecionadas(){
+  const fora = [];
+  for(const id in est.selecao){ if(est.selecao[id] && est.porId[id]) fora.push(est.porId[id]); }
+  return fora.sort(function(a,b){ return a.codigo.localeCompare(b.codigo, "pt-BR"); });
+}
+export function quantasSelecionadas(){
+  let n = 0;
+  for(const id in est.selecao){ if(est.selecao[id]) n++; }
+  return n;
+}
+export function alternarSelecao(id){
+  if(est.selecao[id]) delete est.selecao[id]; else est.selecao[id] = true;
+}
+export function limparSelecao(){ est.selecao = {}; }
+
+/* soma o material das peças escolhidas, separando as que não têm
+   quantitativo de projeto — elas não entram na conta e precisam
+   aparecer como ressalva, não sumir */
+export function materialDe(paredes){
+  const previsto = {}, restante = {};
+  let area = 0, semQuant = 0;
+  for(const w of paredes){
+    if(!w.sku){ semQuant++; continue; }
+    const falta = Math.max(0, 100 - percentual(w)) / 100;
+    if(temArea(w)) area += w.area;
+    for(const k in w.sku){
+      previsto[k] = (previsto[k] || 0) + w.sku[k];
+      restante[k] = (restante[k] || 0) + w.sku[k] * falta;
+    }
+  }
+  return { previsto: previsto, restante: restante, area: area, semQuant: semQuant };
+}
 
 /* nomes para a lista suspensa de "quem executou" */
 export function nomesDeEquipe(){

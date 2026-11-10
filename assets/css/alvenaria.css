@@ -128,6 +128,46 @@
 .alv-bloco__marca b{font-size:9.5px;font-weight:700;background:var(--texto);color:var(--fundo);border-radius:2px;padding:0 3px;line-height:1.5}
 .alv-bloco__alerta{color:var(--st-atraso);font-weight:700;font-size:13px;line-height:1}
 
+/* ---------------- seleção em lote ---------------- */
+.alv-bloco.escolhida{
+  border-color:var(--marca-clara);
+  box-shadow:inset 0 0 0 2px var(--marca-clara);
+}
+.alv-bloco__check{
+  position:absolute; top:4px; left:5px; width:16px; height:16px; border-radius:50%;
+  background:var(--marca-clara); color:#08121f; font-size:11px; font-weight:700;
+  display:grid; place-items:center; line-height:1;
+}
+/* no modo de seleção o toque marca, não abre: o cursor avisa */
+.alv-mosaico.selecionando .alv-bloco{cursor:copy}
+
+.alv-lote{
+  position:fixed; left:0; right:0; z-index:55;
+  bottom:0; padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));
+  background:var(--fundo-3); border-top:1px solid var(--borda-forte);
+  box-shadow:0 -8px 24px -12px rgba(0,0,0,.8);
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  transform:translateY(130%); transition:transform .2s ease;
+}
+.alv-lote.ver{transform:none}
+.alv-lote__info{flex:1 1 150px;min-width:0;font-size:13px;line-height:1.3}
+.alv-lote__info b{font-size:15px;font-variant-numeric:tabular-nums}
+.alv-lote__info span{display:block;color:var(--texto-3);font-size:11.5px;font-variant-numeric:tabular-nums}
+.alv-lote__acoes{display:flex;gap:7px;flex-wrap:wrap}
+.alv-lote__acoes .btn{min-height:40px}
+@media (max-width:700px){
+  .alv-lote__acoes{width:100%}
+  .alv-lote__acoes .btn{flex:1 1 0;min-height:var(--toque);padding-left:8px;padding-right:8px}
+}
+/* o mosaico não pode terminar escondido atrás da barra */
+.com-lote main{padding-bottom:calc(132px + env(safe-area-inset-bottom,0px))}
+
+.alv-lote-aviso{
+  font-size:12.5px; color:var(--texto-2); background:rgba(217,164,65,.12);
+  border-left:3px solid var(--st-andamento); border-radius:0 var(--r) var(--r) 0;
+  padding:9px 11px; margin-top:10px;
+}
+
 /* ---------------- ficha ---------------- */
 .alv-cortina{position:fixed;inset:0;z-index:60;background:rgba(5,10,18,.6);opacity:0;pointer-events:none;transition:opacity .2s}
 .alv-cortina.ver{opacity:1;pointer-events:auto}
