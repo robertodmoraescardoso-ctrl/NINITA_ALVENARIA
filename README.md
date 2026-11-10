@@ -9,8 +9,16 @@ Site estático: HTML, CSS e JavaScript puros, sem etapa de compilação.
 Os dados ficam no Supabase (banco Postgres).
 
 > Separado de propósito do **NINITA_SERVI-OS**, que acompanha os
-> serviços da obra. São dois sites, dois endereços e dois projetos
-> Supabase, com usuários próprios.
+> serviços da obra: outro repositório, outro endereço, outro visual e
+> outras chaves de aparelho. O que os dois dividem é o **projeto
+> Supabase** — banco e login — porque o plano gratuito permite só
+> dois projetos por conta e as duas vagas já estavam ocupadas.
+>
+> Na prática isso ajuda: quem aponta usa um único usuário nos dois
+> sistemas. As tabelas desta disciplina têm o prefixo `alvenaria_` e
+> não encostam nas dos serviços. Para separar o banco mais à frente,
+> basta apontar o `config.js` para outro projeto e rodar a migração
+> lá — ela é idempotente.
 
 ---
 

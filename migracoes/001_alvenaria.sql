@@ -3,8 +3,13 @@
 -- Villa Ninita · Poço da Panela · Rio Ave
 --
 -- O QUE FAZ
---   Cria as tabelas do zero, num projeto Supabase novo e só desta
---   obra. Não depende de nada do sistema de serviços.
+--   Cria as tabelas desta disciplina. Tudo é "if not exists" ou
+--   "create or replace", então rodar de novo não quebra nada e rodar
+--   num banco que já tem parte delas só completa o que falta.
+--
+--   O banco é compartilhado com o site de serviços (NINITA_SERVI-OS).
+--   Todo objeto daqui leva o prefixo alvenaria_ e não encosta nas
+--   tabelas de lá.
 --
 --   alvenaria_equipes        as equipes e empreiteiros que executam
 --   alvenaria_apontamentos   um registro por lançamento do apontador:
@@ -26,7 +31,8 @@
 --   Deve aparecer "Success. No rows returned". Pode rodar de novo.
 --
 -- DEPOIS DE RODAR
---   Cadastre em Authentication > Users quem vai apontar. Sem usuário
+--   Quem já tem usuário no site de serviços entra aqui com o mesmo.
+--   Para alguém novo, cadastre em Authentication > Users: sem usuário
 --   ninguém entra, e sem entrar ninguém grava.
 -- ============================================================
 

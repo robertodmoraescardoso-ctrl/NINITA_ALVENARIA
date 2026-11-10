@@ -14,8 +14,16 @@
      NUNCA cole aqui a chave secret (sb_secret_...) nem a service_role:
      elas dão acesso total ao banco e o site recusa as duas.
 
-   Este projeto Supabase é só da alvenaria. O site de serviços tem
-   o dele, separado, com outros usuários.
+   BANCO COMPARTILHADO COM O SITE DE SERVIÇOS
+     Este é o mesmo projeto Supabase do NINITA_SERVI-OS. Os dois
+     sites são separados em tudo o mais — repositório, endereço,
+     visual e chaves de aparelho — mas dividem o banco e o login,
+     porque o plano gratuito do Supabase permite só dois projetos
+     por conta e as duas vagas já estavam ocupadas.
+
+     Na prática isso é bom para a obra: quem aponta usa um único
+     usuário nos dois sistemas. As tabelas da alvenaria têm o
+     prefixo alvenaria_ e não encostam nas dos serviços.
    ============================================================ */
-export const SUPABASE_URL   = "COLE AQUI A URL DO PROJETO";
-export const SUPABASE_CHAVE = "COLE AQUI A PUBLISHABLE KEY";
+export const SUPABASE_URL   = "https://mouphzazqsikbeibgqyh.supabase.co";
+export const SUPABASE_CHAVE = "sb_publishable_gmsv9MVlXotqi4Z1cdam4Q_SqQJkNVW";
