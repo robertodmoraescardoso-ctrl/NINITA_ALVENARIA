@@ -68,7 +68,6 @@ function montar(w, carregando){
   const pl = est.plano[w.id] || {};
   const p = percentual(w);
   const pav = est.pavPorCodigo[w.pav];
-  const somenteLeitura = !est.podeGravar;
   const skus = w.sku ? Object.keys(w.sku).map(Number).sort(function(a,b){ return a-b; }) : [];
   const responsaveis = [];
   for(const k in est.plano){
@@ -104,18 +103,17 @@ function montar(w, carregando){
       ? '<div class="alv-alerta"><i>i</i><span>Parede mista: tem bloco de mais de uma espessura. ' +
         'A espessura acima é a predominante — para pedir material, use a lista abaixo.</span></div>' : "") +
     (skus.length
-      ? '<details style="margin-top:9px"><summary style="font-size:12.5px;color:var(--tinta-2);cursor:pointer;padding:6px 0">Material da parede</summary>' +
+      ? '<details style="margin-top:9px"><summary style="font-size:12.5px;color:var(--texto-2);cursor:pointer;padding:6px 0">Material da parede</summary>' +
         '<div class="alv-tabela-rolante" style="margin-top:7px"><table class="alv-tabela"><tbody>' +
         skus.map(function(i){
           return "<tr><td>" + esc(est.skus[i]) + "</td><td>" + ni(w.sku[i]) + " un</td></tr>";
         }).join("") + "</tbody></table></div></details>" : "") +
   "</div>" +
 
-  (somenteLeitura
-    ? '<div class="alv-bloco-sec alv-ficha__pad"><div class="alv-msg">' +
-        "Sem permissão para gravar nesta obra. Fale com o Roberto para liberar seu usuário no Supabase." +
-      "</div></div>"
-    : blocoApontamento(w, p) + blocoPlanejamento(w, pl, responsaveis)) +
+  /* O formulário aparece sempre, mesmo sem permissão de gravar.
+     Escondê-lo deixa quem tenta apontar sem nada na tela e sem saber
+     por quê; se a gravação falhar, a mensagem explica o motivo. */
+  blocoApontamento(w, p) + blocoPlanejamento(w, pl, responsaveis) +
 
   '<div class="alv-bloco-sec alv-ficha__pad"><h4>Histórico</h4>' +
     (!est.conectado ? '<div class="alv-msg">Entre na obra para ver os lançamentos desta parede.</div>'
@@ -140,7 +138,6 @@ function fato(rotulo, valor){
 }
 
 function blocoApontamento(w, p){
-  const sugestoes = nomesDeEquipe().map(function(x){ return '<option value="' + esc(x) + '"></option>'; }).join("");
   const ultima = historico.length ? (historico[0].equipe || "") : "";
   return '<div class="alv-bloco-sec alv-ficha__pad"><h4>Apontar execução</h4>' +
     (temArea(w)
@@ -160,10 +157,9 @@ function blocoApontamento(w, p){
           ? "A tabela de projeto não traz bloco de vedação nesta peça: não há m² para medir."
           : "Pavimento sem elevação publicada: sem quantitativo, só dá para marcar concluída ou não.") + "</div>") +
     '<div class="alv-grade" style="margin-top:10px">' +
-      campo("Quem executou", '<input id="alvEquipe" list="alvEquipes" value="' + esc(ultima) + '" placeholder="equipe ou empreiteiro">') +
+      campoEquipe("alvEquipe", "alvEquipeOutra", ultima) +
       campo("Data", '<input id="alvData" type="date" value="' + hojeISO() + '" max="' + hojeISO() + '">') +
     "</div>" +
-    '<datalist id="alvEquipes">' + sugestoes + "</datalist>" +
     '<button type="button" class="alv-salvar" id="alvRegistrar">Registrar apontamento</button>' +
     '<div class="alv-msg" id="alvMsg"></div>' +
   "</div>";
@@ -190,6 +186,53 @@ function campo(rotulo, html){
   return '<label class="alv-campo"><span>' + esc(rotulo) + "</span>" + html + "</label>";
 }
 
+/* ------------------------------------------------------------
+   Campo "quem executou"
+
+   Era um <input list="..."> com datalist. No Safari do iPhone o
+   datalist simplesmente não existe: o campo vira texto puro e o
+   apontador nunca vê as equipes. Por isso aqui é <select> de
+   verdade, com uma opção para digitar uma equipe fora da lista.
+   ------------------------------------------------------------ */
+export function campoEquipe(idSelect, idOutra, valorAtual){
+  const nomes = nomesDeEquipe();
+  const atual = (valorAtual || "").trim();
+  const naLista = atual && nomes.indexOf(atual) !== -1;
+
+  if(!nomes.length){
+    return '<label class="alv-campo largo"><span>Quem executou</span>' +
+      '<input id="' + idOutra + '" value="' + esc(atual) + '" placeholder="equipe ou empreiteiro">' +
+      "</label>" +
+      '<div class="alv-msg" style="grid-column:1/-1;margin-top:-4px">Nenhuma equipe cadastrada. ' +
+      "Cadastre na aba Equipes para escolher pela lista.</div>";
+  }
+  const opcoes =
+    '<option value="">— escolha a equipe —</option>' +
+    nomes.map(function(n){
+      return '<option value="' + esc(n) + '"' + (n === atual ? " selected" : "") + ">" + esc(n) + "</option>";
+    }).join("") +
+    '<option value="__outra"' + (atual && !naLista ? " selected" : "") + ">Outra (digitar)</option>";
+
+  return '<label class="alv-campo largo"><span>Quem executou</span>' +
+      '<select id="' + idSelect + '" data-equipe-sel="' + idOutra + '">' + opcoes + "</select></label>" +
+    campoOutra(idOutra, atual, naLista);
+}
+function campoOutra(idOutra, atual, naLista){
+  const escondido = !atual || naLista;
+  return '<label class="alv-campo largo' + (escondido ? " oculto" : "") + '" id="' + idOutra + '-box">' +
+    "<span>Nome da equipe</span>" +
+    '<input id="' + idOutra + '" value="' + esc(naLista ? "" : atual) + '" placeholder="equipe ou empreiteiro">' +
+    "</label>";
+}
+
+/* lê o que foi escolhido, venha da lista ou do campo livre */
+export function valorEquipe(idSelect, idOutra){
+  const sel = $("#" + idSelect), outra = $("#" + idOutra);
+  if(!sel) return ((outra && outra.value) || "").trim();
+  if(sel.value === "__outra") return ((outra && outra.value) || "").trim();
+  return (sel.value || "").trim();
+}
+
 function diz(sel, texto, erro){
   const el = $(sel);
   if(!el) return;
@@ -206,7 +249,7 @@ export async function registrarApontamento(botao){
   if(!w) return;
   const campoPct = $("#alvPct");
   const pct = Math.max(0, Math.min(100, Math.round(Number(campoPct && campoPct.value) || 0)));
-  const equipe = (($("#alvEquipe") && $("#alvEquipe").value) || "").trim();
+  const equipe = valorEquipe("alvEquipe", "alvEquipeOutra");
   const data = (($("#alvData") && $("#alvData").value) || hojeISO());
   const area = temArea(w) ? Math.round(w.area * pct) / 100 : null;
 

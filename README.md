@@ -65,6 +65,24 @@ dois arquivos de `assets/dados/` junto com o PNG — não mexe no banco.
 
 ---
 
+## Produtividade por equipe
+
+Na aba **Equipes**, a produção é apurada num período que você escolhe
+(campos *De* e *Até*, mais atalhos de 7, 30 e 90 dias ou *Tudo*).
+
+O cálculo tem uma sutileza que vale entender: cada apontamento guarda
+o percentual **acumulado** da parede naquela data, não o que foi feito
+no dia. Somar `area_m2` direto contaria a mesma parede duas vezes — uma
+peça apontada em 50% e depois em 100% viraria uma vez e meia. Então o
+que entra na conta é o **avanço** sobre o lançamento anterior da mesma
+peça, creditado a quem assinou o lançamento mais novo.
+
+`m²/dia` é a RUP aproximada: m² do período ÷ dias distintos com
+lançamento. Serve para comparar equipes e projetar prazo, não como
+medição de folha.
+
+---
+
 ## Seleção em lote
 
 No **Mosaico**, o botão *Selecionar várias* entra no modo de seleção:

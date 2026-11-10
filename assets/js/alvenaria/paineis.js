@@ -1,6 +1,6 @@
 import { $, esc } from "../ui.js";
 import { lerApontamentos } from "./nuvem.js";
-import { dataCurta, est, hojeISO, m2Executado, meuNome, nf, ni, percentual, ROTULO, status, temArea, visiveis } from "./modelo.js";
+import { dataCurta, est, hojeISO, m2Executado, meuNome, nf, ni, percentual, producaoPorEquipe, ROTULO, status, temArea, visiveis } from "./modelo.js";
 
 /* ------------------------------------------------------------
    PAINÉIS — indicadores, filtros, prazos, equipes e material
@@ -114,7 +114,7 @@ export function desenharPrazos(){
   }
   function grupo(titulo, arr){
     if(!arr.length) return "";
-    return '<h2 class="alv-titulo">' + titulo + ' <span style="color:var(--tinta-3)">' + arr.length + "</span></h2>" +
+    return '<h2 class="alv-titulo">' + titulo + ' <span style="color:var(--texto-3)">' + arr.length + "</span></h2>" +
       '<div class="alv-linhas">' + ordenar(arr).map(linha).join("") + "</div>";
   }
 
@@ -160,29 +160,85 @@ function blocoCadastro(){
   return '<h2 class="alv-titulo">Equipes cadastradas</h2>' + formulario + lista;
 }
 
+/* os lançamentos ficam guardados aqui para trocar o período sem
+   bater no banco a cada clique */
+let apontamentosLidos = null;
+
+function iso(d){
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+export function definirPeriodo(dias){
+  if(!dias){ est.periodoDe = ""; est.periodoAte = ""; return; }
+  const ate = new Date(), de = new Date();
+  de.setDate(de.getDate() - (dias - 1));
+  est.periodoAte = iso(ate);
+  est.periodoDe = iso(de);
+}
+
 export async function desenharEquipes(){
   const alvo = $("#alvEquipesTela");
   alvo.innerHTML = blocoCadastro() +
     '<div id="alvEquipesProd"><div class="alv-msg">Carregando lançamentos…</div></div>';
-  let aps = [];
-  try{ aps = await lerApontamentos(); }
+  try{ apontamentosLidos = await lerApontamentos(); }
   catch(e){
+    apontamentosLidos = null;
     $("#alvEquipesProd").innerHTML = '<div class="vazio" style="margin-top:20px">' +
       'Não foi possível ler os lançamentos. Se a migração ainda não foi rodada no Supabase, ' +
       'a produção por equipe fica vazia.</div>';
     return;
   }
+  if(!est.periodoDe && !est.periodoAte) definirPeriodo(30);
+  desenharProducao();
+}
 
-  const porEquipe = {};
-  aps.forEach(function(a){
-    const k = (a.equipe || "").trim();
-    if(!k) return;
-    const g = porEquipe[k] || (porEquipe[k] = { m2:0, dias:{}, pecas:{} });
-    if(a.area_m2 !== null && a.area_m2 !== undefined) g.m2 += Number(a.area_m2);
-    if(a.data) g.dias[a.data] = true;
-    g.pecas[a.pavimento + "__" + a.parede] = true;
+export function desenharProducao(){
+  const destino = $("#alvEquipesProd");
+  if(!destino) return;
+  const prod = producaoPorEquipe(apontamentosLidos || [], est.periodoDe, est.periodoAte);
+  const nomes = Object.keys(prod.equipes).sort(function(a,b){
+    return prod.equipes[b].m2 - prod.equipes[a].m2;
   });
 
+  const controles =
+    '<div class="alv-periodo">' +
+      '<label class="alv-campo"><span>De</span><input type="date" id="alvPerDe" value="' + esc(est.periodoDe) + '"></label>' +
+      '<label class="alv-campo"><span>Até</span><input type="date" id="alvPerAte" value="' + esc(est.periodoAte) + '"></label>' +
+      '<div class="alv-periodo__rapido">' +
+        '<button type="button" class="btn btn--p" data-periodo="7">7 dias</button>' +
+        '<button type="button" class="btn btn--p" data-periodo="30">30 dias</button>' +
+        '<button type="button" class="btn btn--p" data-periodo="90">90 dias</button>' +
+        '<button type="button" class="btn btn--p" data-periodo="0">Tudo</button>' +
+      "</div>" +
+    "</div>";
+
+  const tabela = nomes.length
+    ? '<div class="alv-tabela-rolante"><table class="alv-tabela">' +
+        "<thead><tr><th>Equipe</th><th>m² no período</th><th>m²/dia</th><th>Dias</th>" +
+        "<th>Paredes</th><th>Lanç.</th></tr></thead><tbody>" +
+        nomes.map(function(k){
+          const g = prod.equipes[k], dias = Object.keys(g.dias).length;
+          return "<tr><td>" + esc(k) + "</td><td>" + nf(g.m2) + "</td><td>" +
+                 (dias ? nf(g.m2/dias, 1) : "—") + "</td><td>" + dias + "</td><td>" +
+                 Object.keys(g.pecas).length + "</td><td>" + g.lancamentos + "</td></tr>";
+        }).join("") +
+        "</tbody><tfoot><tr><td>Total</td><td>" + nf(prod.m2Total) + "</td><td>" +
+          (prod.diasTotais ? nf(prod.m2Total/prod.diasTotais, 1) : "—") + "</td><td>" +
+          prod.diasTotais + "</td><td></td><td></td></tr></tfoot></table></div>"
+    : '<div class="vazio">Nenhuma execução lançada neste período.</div>';
+
+  const porResp = carteiraPorResponsavel();
+
+  destino.innerHTML =
+    '<h2 class="alv-titulo">Produção por equipe</h2>' + controles + tabela +
+    '<div class="alv-msg">Cada lançamento guarda o percentual <i>acumulado</i> da parede. ' +
+      "O que entra aqui é o <b>avanço</b> sobre o lançamento anterior da mesma peça, creditado a " +
+      "quem assinou o mais novo — senão uma parede apontada em 50% e depois em 100% contaria " +
+      "uma vez e meia. m²/dia é RUP aproximada, não medição de folha." +
+      (prod.semAreaTotal ? " " + prod.semAreaTotal + " lançamento(s) em peça sem quantitativo entram na contagem de paredes, mas não em m²." : "") +
+    "</div>" + porResp;
+}
+
+function carteiraPorResponsavel(){
   const porResp = {};
   est.paredes.forEach(function(w){
     const p = est.plano[w.id];
@@ -195,39 +251,23 @@ export async function desenharEquipes(){
     if(s === "ok") r.ok++;
   });
 
-  const equipes = Object.keys(porEquipe).sort(function(a,b){ return porEquipe[b].m2 - porEquipe[a].m2; });
   const resps = Object.keys(porResp).sort(function(a,b){ return porResp[b].n - porResp[a].n; });
 
-  let html = '<h2 class="alv-titulo">Produção por equipe</h2>';
-  html += equipes.length
-    ? '<div class="alv-linhas">' + equipes.map(function(k){
-        const g = porEquipe[k], dias = Object.keys(g.dias).length;
-        return '<div class="alv-linha">' +
-          '<span class="alv-linha__meio" style="color:var(--tinta);font-weight:600">' + esc(k) + "</span>" +
-          '<span class="alv-linha__fim">' + nf(g.m2) + " m²</span>" +
-          '<span class="alv-linha__fim" style="width:92px">' + (dias ? nf(g.m2/dias,1) + " m²/dia" : "—") + "</span>" +
-          '<span class="alv-linha__fim" style="width:66px;color:var(--tinta-3)">' + Object.keys(g.pecas).length + " par</span>" +
-        "</div>";
-      }).join("") + "</div>" +
-      '<div class="alv-msg">m²/dia = m² lançados ÷ dias distintos com lançamento. ' +
-      'Serve como RUP aproximada, não como medição de folha.</div>'
-    : '<div class="vazio">Nenhum lançamento com equipe ainda.</div>';
-
-  html += '<h2 class="alv-titulo">Carteira por responsável</h2>';
-  html += resps.length
-    ? '<div class="alv-linhas">' + resps.map(function(k){
-        const r = porResp[k];
-        return '<div class="alv-linha">' +
-          '<span class="alv-linha__meio" style="color:var(--tinta);font-weight:600">' + esc(k) + "</span>" +
-          '<span class="alv-linha__fim" style="width:72px">' + r.n + " par</span>" +
-          '<span class="alv-linha__fim" style="width:100px">' + nf(r.m2,0) + "/" + nf(r.prev,0) + " m²</span>" +
-          (r.atraso ? '<span class="alv-selo atraso">' + r.atraso + " atras.</span>"
-                    : '<span class="alv-selo ok">' + r.ok + " ok</span>") +
-        "</div>";
-      }).join("") + "</div>"
-    : '<div class="vazio">Nenhuma parede atribuída ainda.</div>';
-
-  $("#alvEquipesProd").innerHTML = html;
+  /* A carteira é do estado de hoje, não do período: mostra o que
+     cada responsável tem na mão agora. */
+  return '<h2 class="alv-titulo">Carteira por responsável</h2>' +
+    (resps.length
+      ? '<div class="alv-linhas">' + resps.map(function(k){
+          const r = porResp[k];
+          return '<div class="alv-linha">' +
+            '<span class="alv-linha__meio" style="color:var(--texto);font-weight:600">' + esc(k) + "</span>" +
+            '<span class="alv-linha__fim" style="width:72px">' + r.n + " par</span>" +
+            '<span class="alv-linha__fim" style="width:100px">' + nf(r.m2,0) + "/" + nf(r.prev,0) + " m²</span>" +
+            (r.atraso ? '<span class="alv-selo atraso">' + r.atraso + " atras.</span>"
+                      : '<span class="alv-selo ok">' + r.ok + " ok</span>") +
+          "</div>";
+        }).join("") + "</div>"
+      : '<div class="vazio">Nenhuma parede atribuída ainda.</div>');
 }
 
 /* ---------- material ---------- */

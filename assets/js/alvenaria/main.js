@@ -6,8 +6,8 @@ import { alternarSelecao, carregarCatalogo, definirMeuNome, est, hojeISO, limpar
          percentual, quantasSelecionadas, temArea } from "./modelo.js";
 import { CHAVE_SB, URL_SB, apagarEquipe, cfgLocal, conectar, entrar, gravarEquipe, guardarCfgLocal,
          lerEquipes, lerPlano, lerSituacao, problemaConfig, sair, sessaoAtual, usuario } from "./nuvem.js";
-import { desenharEquipes, desenharFiltros, desenharIndicadores, desenharMaterial,
-         desenharPavimentos, desenharPrazos } from "./paineis.js";
+import { definirPeriodo, desenharEquipes, desenharFiltros, desenharIndicadores, desenharMaterial,
+         desenharPavimentos, desenharPrazos, desenharProducao } from "./paineis.js";
 import { alternarInversao, aplicarZoom, desenharMosaico, desenharPlanta, irAtePeca, mudarZoom, pintarPinos } from "./vistas.js";
 
 /* ------------------------------------------------------------
@@ -164,11 +164,16 @@ definirRepintarLote(repintar);
 document.addEventListener("click", function(ev){
   const alvo = ev.target.closest(
     "[data-pav],[data-aba],[data-vista],[data-zoom],[data-inverter],[data-filtro],[data-peca]," +
-    "[data-pct],[data-lpct],[data-eqdel],[data-selecionar]," +
+    "[data-pct],[data-lpct],[data-eqdel],[data-selecionar],[data-periodo]," +
     "#alvFechar,#alvRegistrar,#alvSalvarPlano,#btnEntrar,#btnSalvarCfg,#alvSair,#alvCortina,#alvEqAdd," +
     "#alvLoteMaterial,#alvLotePlanejar,#alvLoteApontar,#alvLoteLimpar,#alvLoteRegistrar,#alvLoteSalvarPlano");
   if(!alvo) return;
 
+  if(alvo.dataset.periodo !== undefined){
+    definirPeriodo(Number(alvo.dataset.periodo));
+    desenharProducao();
+    return;
+  }
   if(alvo.id === "alvEqAdd"){ adicionarEquipe(alvo); return; }
   if(alvo.dataset.eqdel){ removerEquipe(alvo.dataset.eqdel); return; }
 
@@ -319,6 +324,27 @@ document.addEventListener("input", function(ev){
       desenharMosaico();
     }
   }
+});
+
+document.addEventListener("change", function(ev){
+  const sel = ev.target;
+
+  /* período da produção: em change, não em input — redesenhar a cada
+     tecla tiraria o foco do campo de data no meio da digitação */
+  if(sel.id === "alvPerDe" || sel.id === "alvPerAte"){
+    est.periodoDe = ($("#alvPerDe") && $("#alvPerDe").value) || "";
+    est.periodoAte = ($("#alvPerAte") && $("#alvPerAte").value) || "";
+    desenharProducao();
+    return;
+  }
+
+  /* "Outra (digitar)" na lista de equipes revela o campo livre */
+  if(!sel || !sel.dataset || !sel.dataset.equipeSel) return;
+  const caixa = $("#" + sel.dataset.equipeSel + "-box");
+  if(!caixa) return;
+  const livre = sel.value === "__outra";
+  caixa.classList.toggle("oculto", !livre);
+  if(livre){ const c = $("#" + sel.dataset.equipeSel); if(c) c.focus(); }
 });
 
 document.addEventListener("keydown", function(ev){

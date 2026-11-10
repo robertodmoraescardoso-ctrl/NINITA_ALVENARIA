@@ -22,6 +22,7 @@ export const est = {
   /* seleção em lote, só no mosaico. Zera ao trocar de pavimento:
      apontar em peça que não está na tela é pedido de engano. */
   selecionando: false, selecao: {}, loteAberto: false,
+  periodoDe: "", periodoAte: "",
   conectado: false, podeGravar: false, aviso: ""
 };
 
@@ -165,6 +166,61 @@ export function materialDe(paredes){
     }
   }
   return { previsto: previsto, restante: restante, area: area, semQuant: semQuant };
+}
+
+/* ------------------------------------------------------------
+   Produção por equipe num período
+
+   O apontamento guarda o percentual ACUMULADO da parede naquela
+   data, não o que foi feito no dia. Somar area_m2 direto conta a
+   mesma parede duas vezes: 50% e depois 100% viraria 1,5 parede.
+
+   Aqui cada lançamento rende o INCREMENTO sobre o lançamento
+   anterior da mesma peça, e esse incremento é creditado à equipe
+   que assinou o lançamento mais novo — que é quem levantou aquele
+   pedaço de parede.
+   ------------------------------------------------------------ */
+export function producaoPorEquipe(apontamentos, de, ate){
+  const porPeca = {};
+  for(const a of apontamentos){
+    const id = a.pavimento + "__" + a.parede;
+    (porPeca[id] || (porPeca[id] = [])).push(a);
+  }
+
+  const equipes = {};
+  let m2Total = 0, semAreaTotal = 0;
+  const diasTotais = {};
+
+  for(const id in porPeca){
+    const lista = porPeca[id].slice().sort(function(x,y){
+      const d = String(x.data).localeCompare(String(y.data));
+      return d !== 0 ? d : String(x.criado_em || "").localeCompare(String(y.criado_em || ""));
+    });
+    let areaAnterior = 0, pctAnterior = 0;
+    for(const a of lista){
+      const area = (a.area_m2 === null || a.area_m2 === undefined) ? null : Number(a.area_m2);
+      const pct = Number(a.percentual) || 0;
+      const incArea = area === null ? 0 : Math.max(0, area - areaAnterior);
+      const incPct = Math.max(0, pct - pctAnterior);
+      if(area !== null) areaAnterior = area;
+      pctAnterior = pct;
+
+      if(de && String(a.data) < de) continue;
+      if(ate && String(a.data) > ate) continue;
+      if(incArea <= 0 && incPct <= 0) continue;   /* correção ou repetição */
+
+      const nome = (a.equipe || "").trim() || "sem equipe";
+      const g = equipes[nome] || (equipes[nome] = { m2:0, dias:{}, pecas:{}, lancamentos:0, semArea:0 });
+      g.m2 += incArea;
+      g.lancamentos++;
+      if(a.data) { g.dias[a.data] = true; diasTotais[a.data] = true; }
+      g.pecas[id] = true;
+      if(area === null){ g.semArea++; semAreaTotal++; }
+      m2Total += incArea;
+    }
+  }
+  return { equipes: equipes, m2Total: m2Total, semAreaTotal: semAreaTotal,
+           diasTotais: Object.keys(diasTotais).length };
 }
 
 /* nomes para a lista suspensa de "quem executou" */

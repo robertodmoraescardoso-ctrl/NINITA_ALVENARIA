@@ -1,5 +1,5 @@
 import { $, esc } from "../ui.js";
-import { fecharFicha, mostrarFolha } from "./ficha.js";
+import { campoEquipe, fecharFicha, mostrarFolha, valorEquipe } from "./ficha.js";
 import { est, hojeISO, limparSelecao, m2Executado, materialDe, nf, ni, nomesDeEquipe,
          percentual, quantasSelecionadas, selecionadas, temArea } from "./modelo.js";
 import { gravarApontamento, gravarPlano } from "./nuvem.js";
@@ -138,12 +138,8 @@ export function abrirApontarLote(){
           '<input id="alvLoteData" type="date" value="' + hojeISO() + '" max="' + hojeISO() + '"></label>' +
       "</div>" +
       '<div class="alv-grade" style="margin-top:10px">' +
-        '<label class="alv-campo largo"><span>Quem executou</span>' +
-          '<input id="alvLoteEquipe" list="alvLoteEquipes" placeholder="equipe ou empreiteiro"></label>' +
+        campoEquipe("alvLoteEquipe", "alvLoteEquipeOutra", "") +
       "</div>" +
-      '<datalist id="alvLoteEquipes">' +
-        nomesDeEquipe().map(function(x){ return '<option value="' + esc(x) + '"></option>'; }).join("") +
-      "</datalist>" +
       '<div class="alv-lote-aviso">O percentual vale para cada parede, e o m² de cada uma sai ' +
         "calculado pela sua própria área. Cada peça recebe o seu lançamento no histórico." +
         (semQuant ? " " + semQuant + (semQuant === 1 ? " peça não tem" : " peças não têm") +
@@ -159,7 +155,7 @@ export async function registrarLote(botao){
   const paredes = selecionadas();
   if(!paredes.length) return;
   const pct = Math.max(0, Math.min(100, Math.round(Number(($("#alvLotePct")||{}).value) || 0)));
-  const equipe = (($("#alvLoteEquipe") && $("#alvLoteEquipe").value) || "").trim();
+  const equipe = valorEquipe("alvLoteEquipe", "alvLoteEquipeOutra");
   const data = (($("#alvLoteData") && $("#alvLoteData").value) || hojeISO());
   const msg = $("#alvLoteMsg");
 

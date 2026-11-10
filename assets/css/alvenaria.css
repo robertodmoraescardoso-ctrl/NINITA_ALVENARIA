@@ -273,6 +273,20 @@
 .alv-tabela td{font-variant-numeric:tabular-nums}
 .alv-tabela tfoot td{border-top:2px solid var(--borda-forte);font-weight:700}
 
+/* ---------------- período da produção ---------------- */
+.alv-periodo{
+  display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;
+  border:1px solid var(--linha); border-radius:var(--r);
+  background:var(--fundo-2); padding:12px; margin-bottom:12px;
+}
+.alv-periodo .alv-campo{flex:0 1 150px}
+.alv-periodo__rapido{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+@media (max-width:700px){
+  .alv-periodo .alv-campo{flex:1 1 calc(50% - 5px)}
+  .alv-periodo__rapido{margin-left:0;width:100%}
+  .alv-periodo__rapido .btn{flex:1 1 0;padding-left:6px;padding-right:6px}
+}
+
 /* ---------------- cadastro de equipes ---------------- */
 .alv-nova-equipe{
   display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;

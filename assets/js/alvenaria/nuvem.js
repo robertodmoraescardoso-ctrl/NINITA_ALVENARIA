@@ -104,9 +104,10 @@ export async function lerHistorico(pavimento, parede){
 
 export async function lerApontamentos(){
   const r = await sb.from("alvenaria_apontamentos")
-    .select("pavimento,parede,data,percentual,area_m2,equipe,autor")
+    .select("pavimento,parede,data,percentual,area_m2,equipe,autor,criado_em")
     .is("excluido_em", null)
-    .order("data", { ascending:false });
+    .order("data", { ascending:true })
+    .order("criado_em", { ascending:true });
   if(r.error) throw r.error;
   return r.data || [];
 }
