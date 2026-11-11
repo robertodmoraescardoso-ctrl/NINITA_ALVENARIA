@@ -200,6 +200,31 @@ mais recente da peça; `data_inicio` é a ponta nova.
 
 ---
 
+## A equipe é gente, não um rótulo
+
+O cadastro, na aba **Equipes**, tem dois campos:
+
+| Campo | O que vai nele |
+|---|---|
+| *Profissional(is)* | os pedreiros — `Matias; Severino` |
+| *Servente(s)* | os serventes — `João; Pedro` |
+
+Mais de um nome, **separado por ponto e vírgula**. Enquanto você digita,
+a linha abaixo mostra como está sendo lido (*"Vai gravar 2 profissionais
+e 1 servente · 3 pessoas"*), porque descobrir o separador depois de
+gravar é tarde.
+
+**Os profissionais são a identidade da equipe.** É esse texto que o
+apontamento guarda em `equipe`, é ele que aparece na lista de *quem
+executou* e é por ele que a produção é somada. Por isso a mesma pessoa
+não pode estar nos dois campos, e duas equipes não podem ter a mesma
+lista de profissionais — a tela recusa os dois casos.
+
+No banco, `nome` continua sendo a coluna da identidade (agora com a
+lista), `serventes` é nova e `empresa` saiu da tela mas não foi apagada.
+
+---
+
 ## Produtividade por equipe
 
 Na aba **Equipes**, a produção é apurada num período que você escolhe

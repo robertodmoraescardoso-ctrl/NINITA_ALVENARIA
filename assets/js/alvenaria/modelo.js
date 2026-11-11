@@ -343,6 +343,45 @@ export function nomesDeEquipe(){
                     .map(function(e){ return e.nome; });
 }
 
+/* ------------------------------------------------------------
+   Quem está na equipe
+
+   Profissionais e serventes vão num campo de texto só, separados
+   por ponto e vírgula, porque é como o apontador escreve no papel:
+   "Matias; Severino". O texto dos profissionais É a identidade da
+   equipe — o apontamento guarda esse mesmo texto.
+   ------------------------------------------------------------ */
+export function listaDePessoas(texto){
+  const vistos = {}, fora = [];
+  for(const parte of String(texto || "").split(";")){
+    const n = parte.trim().replace(/\s+/g, " ");
+    if(!n) continue;
+    const chave = n.toLowerCase();
+    if(vistos[chave]) continue;     /* o mesmo nome duas vezes é engano de digitação */
+    vistos[chave] = true;
+    fora.push(n);
+  }
+  return fora;
+}
+/* forma canônica: "  matias ;; severino  " -> "matias; severino" */
+export function textoDePessoas(texto){ return listaDePessoas(texto).join("; "); }
+
+export function pessoasDaEquipe(e){
+  const prof = listaDePessoas(e && e.nome);
+  const serv = listaDePessoas(e && e.serventes);
+  return { profissionais: prof, serventes: serv, total: prof.length + serv.length };
+}
+
+/* "2 profissionais e 1 servente · 3 pessoas" */
+export function composicao(e){
+  const p = pessoasDaEquipe(e);
+  const partes = [];
+  if(p.profissionais.length) partes.push(p.profissionais.length + (p.profissionais.length === 1 ? " profissional" : " profissionais"));
+  if(p.serventes.length) partes.push(p.serventes.length + (p.serventes.length === 1 ? " servente" : " serventes"));
+  if(!partes.length) return "sem gente cadastrada";
+  return partes.join(" e ") + (p.total > 1 ? " · " + p.total + " pessoas" : "");
+}
+
 /* ---------- formatação ---------- */
 
 export function nf(v, casas){

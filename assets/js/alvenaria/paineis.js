@@ -1,6 +1,6 @@
 import { $, esc } from "../ui.js";
 import { lerApontamentos } from "./nuvem.js";
-import { SERVICOS, dataCurta, est, executado, hojeISO, linearDe, m2Executado, meuNome, nf, ni, nomeServico, percentual, previsto, producaoPorEquipe, ROTULO, status, temArea, temPrevisto, unidade, visiveis } from "./modelo.js";
+import { SERVICOS, composicao, dataCurta, est, executado, hojeISO, linearDe, m2Executado, meuNome, nf, ni, nomeServico, percentual, pessoasDaEquipe, previsto, producaoPorEquipe, ROTULO, status, temArea, temPrevisto, unidade, visiveis } from "./modelo.js";
 
 /* ------------------------------------------------------------
    PAINÉIS — indicadores, filtros, prazos, equipes e material
@@ -140,19 +140,28 @@ function blocoCadastro(){
      descobre por quê. Se a gravação falhar, a mensagem explica. */
   const formulario =
     '<div class="alv-nova-equipe">' +
-      '<label class="alv-campo"><span>Nome da equipe</span>' +
-        '<input id="alvEqNome" maxlength="60" placeholder="ex.: Equipe Severino" autocomplete="off"></label>' +
-      '<label class="alv-campo"><span>Empresa (opcional)</span>' +
-        '<input id="alvEqEmpresa" maxlength="60" placeholder="empreiteiro" autocomplete="off"></label>' +
+      '<label class="alv-campo"><span>Profissional(is)</span>' +
+        '<input id="alvEqNome" maxlength="200" placeholder="ex.: Matias; Severino" autocomplete="off"></label>' +
+      '<label class="alv-campo"><span>Servente(s)</span>' +
+        '<input id="alvEqServ" maxlength="200" placeholder="ex.: João; Pedro" autocomplete="off"></label>' +
       '<button type="button" class="btn btn--marca" id="alvEqAdd">Adicionar</button>' +
     "</div>" +
+    '<div class="alv-msg" id="alvEqPreview">Mais de um nome? Separe por <b>ponto e vírgula</b>. ' +
+      "Os profissionais são o nome da equipe na hora de apontar.</div>" +
     '<div class="alv-msg" id="alvEqMsg"></div>';
 
   const lista = est.equipes.length
     ? '<div class="alv-linhas" style="margin-top:10px">' + est.equipes.map(function(e){
+        const p = pessoasDaEquipe(e);
         return '<div class="alv-linha">' +
-          '<span class="alv-linha__meio" style="color:var(--texto);font-weight:600">' + esc(e.nome) +
-            (e.empresa ? ' <span style="color:var(--texto-3);font-weight:400">· ' + esc(e.empresa) + "</span>" : "") +
+          '<span class="alv-linha__meio" style="color:var(--texto)">' +
+            '<b>' + esc(p.profissionais.join("; ") || e.nome) + "</b>" +
+            '<span style="display:block;color:var(--texto-3);font-size:11.5px">' +
+              (p.serventes.length ? "servente" + (p.serventes.length > 1 ? "s" : "") + ": " +
+                esc(p.serventes.join("; ")) + " · " : "") +
+              esc(composicao(e)) +
+              (e.empresa ? " · " + esc(e.empresa) : "") +
+            "</span>" +
           "</span>" +
           '<button type="button" class="alv-apagar" data-eqdel="' + esc(e.id) +
             '" aria-label="Remover ' + esc(e.nome) + '">&times;</button>' +

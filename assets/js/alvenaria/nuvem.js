@@ -154,24 +154,27 @@ export async function apagarPerfil(id){
 
 export async function lerEquipes(){
   const r = await sb.from("alvenaria_equipes")
-    .select("id,nome,empresa,observacao,ativa")
+    .select("id,nome,serventes,empresa,observacao,ativa")
     .is("excluido_em", null)
     .order("nome");
   if(r.error) throw r.error;
   return r.data || [];
 }
 
+/* nome = os profissionais, separados por ponto e vírgula; é a
+   identidade da equipe e o que o apontamento guarda */
 export async function gravarEquipe(e){
   if(e.id){
     const r = await sb.from("alvenaria_equipes").update({
-      nome: e.nome, empresa: e.empresa || "", observacao: e.observacao || "",
+      nome: e.nome, serventes: e.serventes || "",
+      empresa: e.empresa || "", observacao: e.observacao || "",
       ativa: e.ativa !== false, atualizado_em: new Date().toISOString()
     }).eq("id", e.id).select().single();
     if(r.error) throw r.error;
     return r.data;
   }
   const r = await sb.from("alvenaria_equipes").insert({
-    nome: e.nome, empresa: e.empresa || "", observacao: e.observacao || ""
+    nome: e.nome, serventes: e.serventes || "", observacao: e.observacao || ""
   }).select().single();
   if(r.error) throw r.error;
   return r.data;

@@ -2,9 +2,9 @@ import { $, aviso, esc, fecharModal } from "../ui.js";
 import { abrirFicha, definirRepintar, fecharFicha, registrarApontamento, salvarPlanejamento } from "./ficha.js";
 import { abrirApontarLote, abrirMaterialLote, abrirPlanejarLote, definirRepintarLote,
          desenharBarraLote, registrarLote, salvarPlanoLote } from "./lote.js";
-import { alternarSelecao, carregarCatalogo, definirMeuNome, diasDoIntervalo, est, hojeISO,
-         limparSelecao, previsto, percentual, quantasSelecionadas, temArea, temPrevisto,
-         unidade } from "./modelo.js";
+import { alternarSelecao, carregarCatalogo, composicao, definirMeuNome, diasDoIntervalo, est,
+         hojeISO, limparSelecao, listaDePessoas, previsto, percentual, quantasSelecionadas,
+         temArea, temPrevisto, textoDePessoas, unidade } from "./modelo.js";
 import { CHAVE_SB, URL_SB, apagarEquipe, apagarPerfil, cfgLocal, conectar, entrar, gravarEquipe,
          gravarPerfil, guardarCfgLocal, lerEquipes, lerPerfis, lerPlano, lerSituacao,
          problemaConfig, sair, sessaoAtual, usuario } from "./nuvem.js";
@@ -353,6 +353,22 @@ document.addEventListener("input", function(ev){
     const v = Math.max(0, Math.min(100, Number(alvo.value) || 0));
     if($("#alvLotePct")) $("#alvLotePct").value = v;
   }
+  /* cadastro de equipe: mostra como o ponto e vírgula está sendo
+     lido, para ninguém descobrir só depois de gravar */
+  if(alvo.id === "alvEqNome" || alvo.id === "alvEqServ"){
+    const p = $("#alvEqPreview");
+    if(p){
+      const prof = listaDePessoas(($("#alvEqNome") || {}).value);
+      const serv = listaDePessoas(($("#alvEqServ") || {}).value);
+      p.className = "alv-msg";
+      p.innerHTML = (prof.length || serv.length)
+        ? "Vai gravar " + esc(composicao({ nome: prof.join("; "), serventes: serv.join("; ") })) +
+          ": <b>" + esc(prof.join(" · ") || "—") + "</b>" +
+          (serv.length ? " e " + esc(serv.join(" · ")) : "")
+        : "Mais de um nome? Separe por <b>ponto e vírgula</b>. " +
+          "Os profissionais são o nome da equipe na hora de apontar.";
+    }
+  }
   if(alvo.id === "alvBusca"){
     est.busca = alvo.value;
     if(est.vista === "planta"){
@@ -432,23 +448,39 @@ window.addEventListener("orientationchange", function(){
 
 /* ---------- equipes ---------- */
 async function adicionarEquipe(botao){
-  const campoNome = $("#alvEqNome"), campoEmpresa = $("#alvEqEmpresa"), msg = $("#alvEqMsg");
-  const nome = (campoNome.value || "").trim();
-  const empresa = (campoEmpresa.value || "").trim();
+  const campoProf = $("#alvEqNome"), campoServ = $("#alvEqServ"), msg = $("#alvEqMsg");
+  /* o texto vai gravado na forma canônica — "Matias; Severino" —
+     porque é ele que o apontamento guarda para dizer quem executou */
+  const nome = textoDePessoas(campoProf && campoProf.value);
+  const serventes = textoDePessoas(campoServ && campoServ.value);
   function diz(t, erro){ if(msg){ msg.className = "alv-msg" + (erro ? " erro" : ""); msg.textContent = t; } }
 
-  if(!nome){ diz("Escreva o nome da equipe.", true); campoNome.focus(); return; }
-  const repetida = est.equipes.some(function(e){ return e.nome.trim().toLowerCase() === nome.toLowerCase(); });
-  if(repetida){ diz("Já existe uma equipe com esse nome.", true); return; }
+  if(!nome){
+    diz("Escreva ao menos um profissional. Mais de um, separe por ponto e vírgula.", true);
+    if(campoProf) campoProf.focus();
+    return;
+  }
+  const repetida = est.equipes.some(function(e){
+    return textoDePessoas(e.nome).toLowerCase() === nome.toLowerCase();
+  });
+  if(repetida){ diz("Já existe uma equipe com esses profissionais.", true); return; }
+  /* o mesmo nome dos dois lados quase sempre é engano */
+  const cruzados = listaDePessoas(serventes).filter(function(s){
+    return listaDePessoas(nome).some(function(p){ return p.toLowerCase() === s.toLowerCase(); });
+  });
+  if(cruzados.length){
+    diz("\"" + cruzados.join("\", \"") + "\" está nos dois campos. Cada pessoa entra de um lado só.", true);
+    return;
+  }
 
   botao.disabled = true;
   diz("Gravando…");
   try{
-    const nova = await gravarEquipe({ nome: nome, empresa: empresa });
+    const nova = await gravarEquipe({ nome: nome, serventes: serventes });
     est.equipes.push(nova);
     est.equipes.sort(function(a,b){ return a.nome.localeCompare(b.nome, "pt-BR"); });
     desenharEquipes();
-    aviso("Equipe \"" + nome + "\" cadastrada.");
+    aviso("Equipe de " + composicao(nova) + " cadastrada: " + nome + ".");
   }catch(e){
     diz(erroDeEquipe(e), true);
   }finally{
@@ -523,9 +555,11 @@ function erroDePerfil(e){
 
 function erroDeEquipe(e){
   const t = String((e && (e.message || e.hint || e.details)) || e || "");
+  if(/serventes/i.test(t))
+    return "Falta a migração 005_equipe_pessoas.sql no Supabase: a tabela de equipes ainda não tem a coluna de serventes.";
   if(/relation .* does not exist|schema cache|alvenaria_equipes/i.test(t))
     return "A tabela de equipes ainda não existe no banco. Rode migracoes/001_alvenaria.sql no Supabase.";
-  if(/duplicate key|unique/i.test(t)) return "Já existe uma equipe com esse nome.";
+  if(/duplicate key|unique/i.test(t)) return "Já existe uma equipe com esses profissionais.";
   if(/row-level security|permission denied/i.test(t)) return "Seu usuário não tem permissão para gravar.";
   if(/Failed to fetch|NetworkError/i.test(t)) return "Sem conexão. Tente de novo quando o sinal voltar.";
   return "Não gravou: " + t;
