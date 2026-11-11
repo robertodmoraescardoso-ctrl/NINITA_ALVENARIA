@@ -106,6 +106,46 @@ export function hojeISO(){
   return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
 }
 
+/* ------------------------------------------------------------
+   Intervalo de execução
+
+   O apontamento cobre de data_inicio até data. Quem lançou num dia
+   só manda as duas iguais; lançamento antigo pode vir sem início, e
+   aí vale a própria data.
+   ------------------------------------------------------------ */
+export function inicioDe(a){
+  return (a && (a.data_inicio || a.data)) ? String(a.data_inicio || a.data) : "";
+}
+
+/* quantos dias corridos o intervalo cobre, contando as duas pontas */
+export function diasDoIntervalo(ini, fim){
+  if(!ini || !fim) return ini || fim ? 1 : 0;
+  const a = Date.parse(ini + "T00:00:00Z"), b = Date.parse(fim + "T00:00:00Z");
+  if(isNaN(a) || isNaN(b) || b < a) return 1;
+  return Math.round((b - a) / 86400000) + 1;
+}
+
+/* marca num conjunto cada dia do intervalo, para que dois
+   lançamentos que se sobrepõem não contem o mesmo dia duas vezes */
+const LIMITE_DIAS = 400;   /* trava contra data digitada errada */
+export function marcarDias(destino, ini, fim){
+  if(!ini && !fim) return;
+  const de = ini || fim, ate = fim || ini;
+  const n = Math.min(diasDoIntervalo(de, ate), LIMITE_DIAS);
+  const t = Date.parse(de + "T00:00:00Z");
+  if(isNaN(t)){ destino[ate] = true; return; }
+  for(let i = 0; i < n; i++){
+    destino[new Date(t + i * 86400000).toISOString().slice(0,10)] = true;
+  }
+}
+
+/* "05/11 a 07/11" quando o intervalo tem mais de um dia */
+export function periodoCurto(ini, fim){
+  const a = ini || fim, b = fim || ini;
+  if(!a && !b) return "—";
+  return a === b ? dataCurta(b) : dataCurta(a) + " a " + dataCurta(b);
+}
+
 /* quanto a peça tem de previsto no serviço: m² no levante,
    metro linear na marcação */
 export function previsto(w, s){
@@ -235,6 +275,16 @@ export function materialDe(paredes){
    anterior da mesma peça, e esse incremento é creditado à equipe
    que assinou o lançamento mais novo — que é quem levantou aquele
    pedaço de parede.
+
+   OS DIAS vêm do intervalo, não da data do lançamento. Uma parede
+   levantada de segunda a quarta conta três dias, e dois lançamentos
+   que pegam o mesmo dia não o contam duas vezes. É isso que faz o
+   m²/dia ser RUP de verdade e não produção por lançamento.
+
+   O PERÍODO (de/até) filtra pela data de referência — o dia em que
+   o avanço foi medido. Um trecho que começou antes do período entra
+   inteiro se terminou dentro dele: o avanço é creditado na medição,
+   não rateado dia a dia.
    ------------------------------------------------------------ */
 export function producaoPorEquipe(apontamentos, de, ate, servico){
   const alvo = servico || servicoAtual();
@@ -274,7 +324,10 @@ export function producaoPorEquipe(apontamentos, de, ate, servico){
       const g = equipes[nome] || (equipes[nome] = { m2:0, dias:{}, pecas:{}, lancamentos:0, semArea:0 });
       g.m2 += incArea;
       g.lancamentos++;
-      if(a.data) { g.dias[a.data] = true; diasTotais[a.data] = true; }
+      /* todos os dias do intervalo, sem contar duas vezes o dia em
+         que dois lançamentos se encontram */
+      marcarDias(g.dias, inicioDe(a), a.data);
+      marcarDias(diasTotais, inicioDe(a), a.data);
       g.pecas[id] = true;
       if(area === null){ g.semArea++; semAreaTotal++; }
       m2Total += incArea;

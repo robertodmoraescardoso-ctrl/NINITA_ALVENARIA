@@ -2,8 +2,9 @@ import { $, aviso, esc, fecharModal } from "../ui.js";
 import { abrirFicha, definirRepintar, fecharFicha, registrarApontamento, salvarPlanejamento } from "./ficha.js";
 import { abrirApontarLote, abrirMaterialLote, abrirPlanejarLote, definirRepintarLote,
          desenharBarraLote, registrarLote, salvarPlanoLote } from "./lote.js";
-import { alternarSelecao, carregarCatalogo, definirMeuNome, est, hojeISO, limparSelecao, previsto,
-         percentual, quantasSelecionadas, temArea, temPrevisto } from "./modelo.js";
+import { alternarSelecao, carregarCatalogo, definirMeuNome, diasDoIntervalo, est, hojeISO,
+         limparSelecao, previsto, percentual, quantasSelecionadas, temArea, temPrevisto,
+         unidade } from "./modelo.js";
 import { CHAVE_SB, URL_SB, apagarEquipe, apagarPerfil, cfgLocal, conectar, entrar, gravarEquipe,
          gravarPerfil, guardarCfgLocal, lerEquipes, lerPerfis, lerPlano, lerSituacao,
          problemaConfig, sair, sessaoAtual, usuario } from "./nuvem.js";
@@ -377,6 +378,13 @@ document.addEventListener("change", function(ev){
     return;
   }
 
+  /* intervalo do apontamento: mantém as duas pontas coerentes e diz
+     quantos dias de trabalho o lançamento está cobrindo */
+  if(sel.id === "alvDataIni" || sel.id === "alvData")
+    return ajustarIntervalo("alvDataIni", "alvData", "alvDias", sel.id);
+  if(sel.id === "alvLoteDataIni" || sel.id === "alvLoteData")
+    return ajustarIntervalo("alvLoteDataIni", "alvLoteData", "alvLoteDias", sel.id);
+
   /* "Outra (digitar)" na lista de equipes revela o campo livre */
   if(!sel || !sel.dataset || !sel.dataset.equipeSel) return;
   const caixa = $("#" + sel.dataset.equipeSel + "-box");
@@ -385,6 +393,27 @@ document.addEventListener("change", function(ev){
   caixa.classList.toggle("oculto", !livre);
   if(livre){ const c = $("#" + sel.dataset.equipeSel); if(c) c.focus(); }
 });
+
+/* ------------------------------------------------------------
+   Intervalo do apontamento
+
+   Quem mexe numa ponta arrasta a outra se elas se cruzarem — é o
+   que a pessoa quis dizer, e evita o erro "o começo está depois do
+   término" só porque ela mudou o campo de baixo primeiro.
+   ------------------------------------------------------------ */
+function ajustarIntervalo(idIni, idFim, idAviso, mexido){
+  const ini = $("#" + idIni), fim = $("#" + idFim), aviso = $("#" + idAviso);
+  if(!ini || !fim) return;
+  if(ini.value && fim.value && ini.value > fim.value){
+    if(mexido === idIni) fim.value = ini.value; else ini.value = fim.value;
+  }
+  ini.max = fim.value || hojeISO();
+  if(!aviso) return;
+  const d = diasDoIntervalo(ini.value, fim.value);
+  aviso.className = "alv-msg";
+  aviso.textContent = d <= 1 ? "Um dia de trabalho."
+    : d + " dias de trabalho — é o que entra na conta de " + unidade() + "/dia da equipe.";
+}
 
 document.addEventListener("keydown", function(ev){
   if(ev.key === "Escape" && est.aberta) fecharFicha();

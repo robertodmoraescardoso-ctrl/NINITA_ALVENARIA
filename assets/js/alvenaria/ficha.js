@@ -1,5 +1,5 @@
 import { $, esc } from "../ui.js";
-import { AVISOS, SERVICOS, dataCurta, definirMeuNome, est, executado, hojeISO, m2Executado, meuNome, nf, ni, nomeServico, nomesDeEquipe, percentual, previsto, servicoAtual, temArea, temPrevisto, unidade } from "./modelo.js";
+import { AVISOS, SERVICOS, dataCurta, definirMeuNome, diasDoIntervalo, est, executado, hojeISO, inicioDe, m2Executado, meuNome, nf, ni, nomeServico, nomesDeEquipe, percentual, periodoCurto, previsto, servicoAtual, temArea, temPrevisto, unidade } from "./modelo.js";
 import { gravarApontamento, gravarPlano, lerHistorico } from "./nuvem.js";
 
 /* ------------------------------------------------------------
@@ -133,7 +133,10 @@ function montar(w, carregando){
        ? '<div class="alv-hist">' + historico.map(function(l){
            const sv = l.servico === "marcacao" ? "marcacao" : "elevacao";
            const q = sv === "marcacao" ? l.metros_m : l.area_m2;
-           return '<div class="alv-hist__l"><span class="alv-hist__d">' + dataCurta(l.data) + "</span>" +
+           const dd = diasDoIntervalo(inicioDe(l), l.data);
+           return '<div class="alv-hist__l"><span class="alv-hist__d">' +
+             esc(periodoCurto(inicioDe(l), l.data)) +
+             (dd > 1 ? ' <i class="alv-hist__dias">' + dd + " dias</i>" : "") + "</span>" +
              '<span class="alv-selo ' + (sv === "marcacao" ? "andamento" : "ok") + '" style="margin-right:2px">' +
                SERVICOS[sv].nome + "</span>" +
              '<span class="alv-hist__p">' + Math.round(Number(l.percentual)) + "%</span>" +
@@ -192,8 +195,10 @@ function blocoApontamento(w){
         '<div class="alv-msg">' + semQuant + "</div>") +
     '<div class="alv-grade" style="margin-top:10px">' +
       campoEquipe("alvEquipe", "alvEquipeOutra", ultima) +
-      campo("Data", '<input id="alvData" type="date" value="' + hojeISO() + '" max="' + hojeISO() + '">') +
+      campo("Começou em", '<input id="alvDataIni" type="date" value="' + hojeISO() + '" max="' + hojeISO() + '">') +
+      campo("Terminou em", '<input id="alvData" type="date" value="' + hojeISO() + '" max="' + hojeISO() + '">') +
     "</div>" +
+    '<div class="alv-msg" id="alvDias">Um dia de trabalho.</div>' +
     '<button type="button" class="alv-salvar" id="alvRegistrar">Registrar ' +
       nomeServico(s).toLowerCase() + "</button>" +
     '<div class="alv-msg" id="alvMsg"></div>' +
@@ -286,6 +291,8 @@ export async function registrarApontamento(botao){
   const pct = Math.max(0, Math.min(100, Math.round(Number(campoPct && campoPct.value) || 0)));
   const equipe = valorEquipe("alvEquipe", "alvEquipeOutra");
   const data = (($("#alvData") && $("#alvData").value) || hojeISO());
+  const ini  = (($("#alvDataIni") && $("#alvDataIni").value) || data);
+  if(ini > data){ diz("#alvMsg", "O começo está depois do término.", true); return; }
   const s = servicoAtual();
   const qtd = temPrevisto(w, s) ? Math.round(previsto(w, s) * pct) / 100 : null;
   const area = s === "elevacao" ? qtd : null;
@@ -294,16 +301,20 @@ export async function registrarApontamento(botao){
   botao.disabled = true;
   diz("#alvMsg", "Gravando…");
   try{
-    await gravarApontamento({ pavimento:w.pav, parede:w.codigo, servico:s, data:data,
+    await gravarApontamento({ pavimento:w.pav, parede:w.codigo, servico:s,
+                              data_inicio:ini, data:data,
                               percentual:pct, area_m2:area, metros_m:metros, equipe:equipe });
-    est.situacao[w.id + "__" + s] = { pavimento:w.pav, parede:w.codigo, servico:s, data:data,
+    est.situacao[w.id + "__" + s] = { pavimento:w.pav, parede:w.codigo, servico:s,
+                                      data_inicio:ini, data:data,
                                       percentual:pct, area_m2:area, metros_m:metros, equipe:equipe };
     historico = await lerHistorico(w.pav, w.codigo).catch(function(){ return historico; });
     repintar();
     montar(w, false);
+    const dd = diasDoIntervalo(ini, data);
     diz("#alvMsg", nomeServico(s) + " registrada: " + pct + "%" +
                    (qtd !== null ? " · " + nf(qtd) + " " + unidade(s) : "") +
-                   (equipe ? " · " + equipe : "") + " em " + dataCurta(data) + ".");
+                   (equipe ? " · " + equipe : "") + " em " + periodoCurto(ini, data) +
+                   (dd > 1 ? " (" + dd + " dias)" : "") + ".");
   }catch(e){
     diz("#alvMsg", mensagemErro(e), true);
   }finally{
@@ -339,8 +350,10 @@ export async function salvarPlanejamento(botao){
 
 function mensagemErro(e){
   const t = String((e && (e.message || e.hint || e.details)) || e || "");
+  if(/data_inicio/i.test(t))
+    return "Falta a migração 004_intervalo.sql no Supabase: o banco ainda não tem a data de início.";
   if(/relation .* does not exist|schema cache|alvenaria_/i.test(t))
-    return "As tabelas da alvenaria ainda não existem no banco. Rode a migração 004_alvenaria.sql no Supabase.";
+    return "As tabelas da alvenaria ainda não existem no banco. Rode as migrações da pasta migracoes/ no Supabase, em ordem.";
   if(/row-level security|permission denied|violates/i.test(t))
     return "Seu usuário não tem permissão para gravar. Fale com o Roberto.";
   if(/Failed to fetch|NetworkError/i.test(t))

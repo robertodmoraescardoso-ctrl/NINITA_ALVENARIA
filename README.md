@@ -181,21 +181,52 @@ no Supabase.
 
 ---
 
+## O apontamento é um intervalo, não um dia
+
+Parede não nasce e termina no mesmo dia. O lançamento guarda **quando
+começou** e **quando terminou**:
+
+| Campo | O que é |
+|---|---|
+| *Começou em* | o dia em que a equipe pegou aquele trecho |
+| *Terminou em* | o dia em que parou ali e foi medido |
+
+Os dois vêm preenchidos com hoje, então quem fez tudo num dia só toca
+no botão e pronto. Mexer numa ponta arrasta a outra se elas se
+cruzarem, e abaixo dos campos a tela diz quantos dias de trabalho o
+lançamento está cobrindo. No banco, `data` continua sendo a data de
+referência — a que ordena o histórico e decide qual é o apontamento
+mais recente da peça; `data_inicio` é a ponta nova.
+
+---
+
 ## Produtividade por equipe
 
 Na aba **Equipes**, a produção é apurada num período que você escolhe
 (campos *De* e *Até*, mais atalhos de 7, 30 e 90 dias ou *Tudo*).
 
-O cálculo tem uma sutileza que vale entender: cada apontamento guarda
-o percentual **acumulado** da parede naquela data, não o que foi feito
-no dia. Somar `area_m2` direto contaria a mesma parede duas vezes — uma
-peça apontada em 50% e depois em 100% viraria uma vez e meia. Então o
-que entra na conta é o **avanço** sobre o lançamento anterior da mesma
-peça, creditado a quem assinou o lançamento mais novo.
+O cálculo tem duas sutilezas que valem entender.
 
-`m²/dia` é a RUP aproximada: m² do período ÷ dias distintos com
-lançamento. Serve para comparar equipes e projetar prazo, não como
-medição de folha.
+**O avanço, não o acumulado.** Cada apontamento guarda o percentual
+**acumulado** da parede, não o que foi feito no dia. Somar `area_m2`
+direto contaria a mesma parede duas vezes — uma peça apontada em 50% e
+depois em 100% viraria uma vez e meia. Então o que entra na conta é o
+**avanço** sobre o lançamento anterior da mesma peça, creditado a quem
+assinou o lançamento mais novo.
+
+**Dias em obra, não dias com lançamento.** A coluna *Dias em obra* soma
+os dias corridos cobertos pelos intervalos, sem contar duas vezes o dia
+em que dois lançamentos se encontram. Uma parede levantada de segunda a
+quarta vale três dias, não um. É isso que faz o `m²/dia` ser RUP de
+verdade: antes, lançar o acumulado uma vez por semana dava uma RUP sete
+vezes maior que a real.
+
+`m²/dia` é RUP aproximada: quantidade do período ÷ dias em obra. Serve
+para comparar equipes e projetar prazo, não como medição de folha.
+
+O **período** filtra pela data de referência. Um trecho que começou
+antes do período entra inteiro se terminou dentro dele: o avanço é
+creditado na medição, não rateado dia a dia.
 
 ---
 

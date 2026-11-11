@@ -1,8 +1,8 @@
 import { $, esc } from "../ui.js";
 import { campoEquipe, fecharFicha, mostrarFolha, valorEquipe } from "./ficha.js";
-import { est, executado, hojeISO, limparSelecao, linearDe, materialDe, nf, ni, nomeServico,
-         percentual, previsto, quantasSelecionadas, selecionadas, servicoAtual, temArea,
-         temPrevisto, unidade } from "./modelo.js";
+import { diasDoIntervalo, est, executado, hojeISO, limparSelecao, linearDe, materialDe, nf, ni,
+         nomeServico, nomesDeEquipe, percentual, periodoCurto, previsto, quantasSelecionadas,
+         selecionadas, servicoAtual, temArea, temPrevisto, unidade } from "./modelo.js";
 import { gravarApontamento, gravarPlano } from "./nuvem.js";
 
 /* ------------------------------------------------------------
@@ -143,12 +143,15 @@ export function abrirApontarLote(){
       '<div class="alv-grade" style="margin-top:4px">' +
         '<label class="alv-campo"><span>% executado</span>' +
           '<input id="alvLotePctN" type="number" inputmode="numeric" min="0" max="100" step="1" value="100"></label>' +
-        '<label class="alv-campo"><span>Data</span>' +
-          '<input id="alvLoteData" type="date" value="' + hojeISO() + '" max="' + hojeISO() + '"></label>' +
       "</div>" +
       '<div class="alv-grade" style="margin-top:10px">' +
         campoEquipe("alvLoteEquipe", "alvLoteEquipeOutra", "") +
+        '<label class="alv-campo"><span>Começou em</span>' +
+          '<input id="alvLoteDataIni" type="date" value="' + hojeISO() + '" max="' + hojeISO() + '"></label>' +
+        '<label class="alv-campo"><span>Terminou em</span>' +
+          '<input id="alvLoteData" type="date" value="' + hojeISO() + '" max="' + hojeISO() + '"></label>' +
       "</div>" +
+      '<div class="alv-msg" id="alvLoteDias">Um dia de trabalho.</div>' +
       '<div class="alv-lote-aviso">Lançando <b>' + nomeServico(s).toLowerCase() + "</b>. " +
         "O percentual vale para cada parede, e " + unidade(s) + " de cada uma sai do seu próprio " +
         "previsto. Cada peça recebe o seu lançamento no histórico." +
@@ -168,7 +171,13 @@ export async function registrarLote(botao){
   const pct = Math.max(0, Math.min(100, Math.round(Number(($("#alvLotePct")||{}).value) || 0)));
   const equipe = valorEquipe("alvLoteEquipe", "alvLoteEquipeOutra");
   const data = (($("#alvLoteData") && $("#alvLoteData").value) || hojeISO());
+  const ini  = (($("#alvLoteDataIni") && $("#alvLoteDataIni").value) || data);
   const msg = $("#alvLoteMsg");
+
+  if(ini > data){
+    if(msg){ msg.className = "alv-msg erro"; msg.textContent = "O começo está depois do término."; }
+    return;
+  }
 
   botao.disabled = true;
   let ok = 0; const falhas = [];
@@ -179,10 +188,11 @@ export async function registrarLote(botao){
     const area = servico === "elevacao" ? qtd : null;
     const metros = servico === "marcacao" ? qtd : null;
     try{
-      await gravarApontamento({ pavimento:w.pav, parede:w.codigo, servico:servico, data:data,
+      await gravarApontamento({ pavimento:w.pav, parede:w.codigo, servico:servico,
+                                data_inicio:ini, data:data,
                                 percentual:pct, area_m2:area, metros_m:metros, equipe:equipe });
       est.situacao[w.id + "__" + servico] = { pavimento:w.pav, parede:w.codigo, servico:servico,
-                                              data:data, percentual:pct, area_m2:area,
+                                              data_inicio:ini, data:data, percentual:pct, area_m2:area,
                                               metros_m:metros, equipe:equipe };
       ok++;
     }catch(e){
@@ -194,9 +204,11 @@ export async function registrarLote(botao){
 
   if(msg){
     if(!falhas.length){
+      const dd = diasDoIntervalo(ini, data);
       msg.className = "alv-msg";
       msg.textContent = ok + (ok === 1 ? " parede registrada" : " paredes registradas") +
-        " em " + pct + "%" + (equipe ? " por " + equipe : "") + ".";
+        " em " + pct + "%" + (equipe ? " por " + equipe : "") +
+        " · " + periodoCurto(ini, data) + (dd > 1 ? " (" + dd + " dias)" : "") + ".";
     }else{
       msg.className = "alv-msg erro";
       msg.textContent = ok + " de " + paredes.length + " gravadas. Falharam: " +

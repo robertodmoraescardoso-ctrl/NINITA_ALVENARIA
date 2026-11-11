@@ -106,7 +106,7 @@ export async function lerHistorico(pavimento, parede){
 
 export async function lerApontamentos(){
   const r = await sb.from("alvenaria_apontamentos")
-    .select("pavimento,parede,servico,data,percentual,area_m2,metros_m,equipe,autor,criado_em")
+    .select("pavimento,parede,servico,data_inicio,data,percentual,area_m2,metros_m,equipe,autor,criado_em")
     .is("excluido_em", null)
     .order("data", { ascending:true })
     .order("criado_em", { ascending:true });
@@ -193,6 +193,8 @@ export async function gravarApontamento(ap){
     pavimento : ap.pavimento,
     parede    : ap.parede,
     servico   : ap.servico || "elevacao",
+    /* o intervalo: começou em data_inicio, terminou/foi medido em data */
+    data_inicio: ap.data_inicio || ap.data,
     data      : ap.data,
     percentual: ap.percentual,
     area_m2   : (ap.area_m2 === null || ap.area_m2 === undefined) ? null : ap.area_m2,

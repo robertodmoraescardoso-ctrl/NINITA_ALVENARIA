@@ -280,8 +280,8 @@ export function desenharProducao(){
 
   const tabela = nomes.length
     ? '<div class="alv-tabela-rolante"><table class="alv-tabela">' +
-        "<thead><tr><th>Equipe</th><th>" + un + " no período</th><th>" + un + "/dia</th><th>Dias</th>" +
-        "<th>Paredes</th><th>Lanç.</th></tr></thead><tbody>" +
+        "<thead><tr><th>Equipe</th><th>" + un + " no período</th><th>" + un + "/dia</th>" +
+        "<th>Dias em obra</th><th>Paredes</th><th>Lanç.</th></tr></thead><tbody>" +
         nomes.map(function(k){
           const g = prod.equipes[k], dias = Object.keys(g.dias).length;
           return "<tr><td>" + esc(k) + "</td><td>" + nf(g.m2) + "</td><td>" +
@@ -300,7 +300,9 @@ export function desenharProducao(){
     '<div class="alv-msg">Cada lançamento guarda o percentual <i>acumulado</i> da parede. ' +
       "O que entra aqui é o <b>avanço</b> sobre o lançamento anterior da mesma peça, creditado a " +
       "quem assinou o mais novo — senão uma parede apontada em 50% e depois em 100% contaria " +
-      "uma vez e meia. m²/dia é RUP aproximada, não medição de folha." +
+      "uma vez e meia. <b>Dias em obra</b> são os dias corridos cobertos pelos intervalos dos " +
+      "lançamentos, sem contar duas vezes o dia em que dois deles se encontram: uma parede " +
+      "levantada de segunda a quarta vale três dias. " + un + "/dia é RUP aproximada, não medição de folha." +
       (prod.semAreaTotal ? " " + prod.semAreaTotal + " lançamento(s) em peça sem quantitativo entram na contagem de paredes, mas não em m²." : "") +
     "</div>" + porResp;
 }

@@ -271,7 +271,9 @@
 .alv-hist{display:flex;flex-direction:column}
 .alv-hist__l{display:flex;gap:9px;align-items:baseline;padding:7px 0;border-top:1px dotted var(--borda);font-size:13px}
 .alv-hist__l:first-child{border-top:0}
-.alv-hist__d{font-size:12px;color:var(--texto-3);flex:none;width:46px;font-variant-numeric:tabular-nums}
+/* cabe "05/11 a 07/11" e, embaixo, o selo com a quantidade de dias */
+.alv-hist__d{font-size:12px;color:var(--texto-3);flex:none;width:84px;font-variant-numeric:tabular-nums;line-height:1.35}
+.alv-hist__dias{display:block;font-style:normal;font-size:10.5px;color:var(--marca-clara);letter-spacing:.2px}
 .alv-hist__p{font-weight:700;flex:none;width:42px;font-variant-numeric:tabular-nums}
 .alv-hist__q{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--texto-2)}
 
