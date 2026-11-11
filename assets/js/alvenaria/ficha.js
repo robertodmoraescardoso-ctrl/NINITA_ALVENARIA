@@ -1,5 +1,5 @@
 import { $, esc } from "../ui.js";
-import { AVISOS, dataCurta, definirMeuNome, est, hojeISO, m2Executado, meuNome, nf, ni, nomesDeEquipe, percentual, temArea } from "./modelo.js";
+import { AVISOS, SERVICOS, dataCurta, definirMeuNome, est, executado, hojeISO, m2Executado, meuNome, nf, ni, nomeServico, nomesDeEquipe, percentual, previsto, servicoAtual, temArea, temPrevisto, unidade } from "./modelo.js";
 import { gravarApontamento, gravarPlano, lerHistorico } from "./nuvem.js";
 
 /* ------------------------------------------------------------
@@ -91,10 +91,14 @@ function montar(w, carregando){
 
   '<div class="alv-bloco-sec alv-ficha__pad"><h4>Previsto em projeto</h4>' +
     '<div class="alv-fatos">' +
+      fato("Comprimento", temPrevisto(w, "marcacao") ? nf(w.linear) + " m" : "—") +
       fato("Área líquida", temArea(w) ? nf(w.area) + " m²" : "—") +
       fato("Blocos", w.blocos === null ? "—" : ni(w.blocos)) +
       fato("Espessura", w.espessura === null ? "—" : w.espessura + " cm") +
-      fato("Apontado", temArea(w) ? nf(m2Executado(w)) + " m²" : p + "%") +
+      fato("Marcação", temPrevisto(w, "marcacao")
+            ? nf(executado(w, "marcacao")) + " m" : percentual(w, "marcacao") + "%") +
+      fato("Levante", temArea(w)
+            ? nf(executado(w, "elevacao")) + " m²" : percentual(w, "elevacao") + "%") +
     "</div>" +
     [].concat(w.avisos.split("")).map(function(f){
       return AVISOS[f] ? '<div class="alv-alerta"><i>' + AVISOS[f][1] + "</i><span>" + esc(AVISOS[f][0]) + "</span></div>" : "";
@@ -120,17 +124,21 @@ function montar(w, carregando){
         "Seu perfil é de acompanhamento: você vê tudo, mas não lança. " +
         "Para apontar, peça ao Roberto para mudar seu papel em Equipes &gt; Quem tem acesso." +
       "</div></div>"
-    : blocoApontamento(w, p) + blocoPlanejamento(w, pl, responsaveis)) +
+    : blocoApontamento(w) + blocoPlanejamento(w, pl, responsaveis)) +
 
   '<div class="alv-bloco-sec alv-ficha__pad"><h4>Histórico</h4>' +
     (!est.conectado ? '<div class="alv-msg">Entre na obra para ver os lançamentos desta parede.</div>'
      : carregando ? '<div class="alv-msg">Carregando lançamentos…</div>'
      : historico.length
        ? '<div class="alv-hist">' + historico.map(function(l){
+           const sv = l.servico === "marcacao" ? "marcacao" : "elevacao";
+           const q = sv === "marcacao" ? l.metros_m : l.area_m2;
            return '<div class="alv-hist__l"><span class="alv-hist__d">' + dataCurta(l.data) + "</span>" +
+             '<span class="alv-selo ' + (sv === "marcacao" ? "andamento" : "ok") + '" style="margin-right:2px">' +
+               SERVICOS[sv].nome + "</span>" +
              '<span class="alv-hist__p">' + Math.round(Number(l.percentual)) + "%</span>" +
              '<span class="alv-hist__q">' + esc(l.equipe || "sem equipe") +
-             (l.area_m2 !== null && l.area_m2 !== undefined && Number(l.area_m2) > 0 ? " · " + nf(l.area_m2) + " m²" : "") +
+             (q !== null && q !== undefined && Number(q) > 0 ? " · " + nf(q) + " " + SERVICOS[sv].unidade : "") +
              (l.autor ? " · " + esc(l.autor) : "") + "</span></div>";
          }).join("") + "</div>"
        : '<div class="alv-msg">Nenhum lançamento nesta parede ainda.</div>') +
@@ -144,30 +152,50 @@ function fato(rotulo, valor){
          '<div class="alv-fato__v">' + esc(valor) + "</div></div>";
 }
 
-function blocoApontamento(w, p){
+function blocoApontamento(w){
+  const s = servicoAtual();
+  const p = percentual(w, s);
+  const un = unidade(s);
+  const base = previsto(w, s);
+  const tem = temPrevisto(w, s);
   const ultima = historico.length ? (historico[0].equipe || "") : "";
-  return '<div class="alv-bloco-sec alv-ficha__pad"><h4>Apontar execução</h4>' +
-    (temArea(w)
+
+  /* o apontamento é de UM serviço por vez; a aba aqui dentro troca
+     sem fechar a ficha e acompanha o serviço em foco no painel */
+  const abas = '<div class="alv-servico" style="margin:0 0 10px">' +
+    Object.keys(SERVICOS).reverse().map(function(k){
+      return '<button type="button" data-servico="' + k + '" aria-pressed="' + (k === s) + '">' +
+             SERVICOS[k].nome + " <i>" + SERVICOS[k].unidade + "</i></button>";
+    }).join("") + "</div>";
+
+  const semQuant = s === "marcacao"
+    ? "Esta peça não tem comprimento na planilha de cotação — shafts, semienterrado e academia não constam dela. Dá para marcar concluída ou não."
+    : (w.area === 0
+        ? "A tabela de projeto não traz bloco de vedação nesta peça: não há m² para medir."
+        : "Pavimento sem elevação publicada: sem quantitativo, só dá para marcar concluída ou não.");
+
+  return '<div class="alv-bloco-sec alv-ficha__pad"><h4>Apontar execução</h4>' + abas +
+    (tem
       ? '<div class="alv-pcts">' + [0,25,50,75,100].map(function(v){
             return '<button type="button" data-pct="' + v + '" aria-pressed="' + (p === v) + '">' + v + "%</button>";
           }).join("") + "</div>" +
         '<input type="range" class="alv-faixa" id="alvPct" min="0" max="100" step="1" value="' + p + '" aria-label="Percentual executado">' +
         '<div class="alv-grade" style="margin-top:4px">' +
           campo("% executado", '<input id="alvPctN" type="number" inputmode="numeric" min="0" max="100" step="1" value="' + p + '">') +
-          campo("m² executados", '<input id="alvM2" type="number" inputmode="decimal" min="0" max="' + w.area + '" step="0.01" value="' + m2Executado(w).toFixed(2) + '">') +
+          campo(un + " executados", '<input id="alvM2" type="number" inputmode="decimal" min="0" max="' + base +
+                '" step="0.01" value="' + executado(w, s).toFixed(2) + '">') +
         "</div>"
       : '<div class="alv-pcts dupla">' + [0,100].map(function(v){
             return '<button type="button" data-pct="' + v + '" aria-pressed="' + (p === v) + '">' + (v ? "Concluída" : "Não iniciada") + "</button>";
           }).join("") + "</div>" +
         '<input type="hidden" id="alvPct" value="' + p + '">' +
-        '<div class="alv-msg">' + (w.area === 0
-          ? "A tabela de projeto não traz bloco de vedação nesta peça: não há m² para medir."
-          : "Pavimento sem elevação publicada: sem quantitativo, só dá para marcar concluída ou não.") + "</div>") +
+        '<div class="alv-msg">' + semQuant + "</div>") +
     '<div class="alv-grade" style="margin-top:10px">' +
       campoEquipe("alvEquipe", "alvEquipeOutra", ultima) +
       campo("Data", '<input id="alvData" type="date" value="' + hojeISO() + '" max="' + hojeISO() + '">') +
     "</div>" +
-    '<button type="button" class="alv-salvar" id="alvRegistrar">Registrar apontamento</button>' +
+    '<button type="button" class="alv-salvar" id="alvRegistrar">Registrar ' +
+      nomeServico(s).toLowerCase() + "</button>" +
     '<div class="alv-msg" id="alvMsg"></div>' +
   "</div>";
 }
@@ -258,19 +286,23 @@ export async function registrarApontamento(botao){
   const pct = Math.max(0, Math.min(100, Math.round(Number(campoPct && campoPct.value) || 0)));
   const equipe = valorEquipe("alvEquipe", "alvEquipeOutra");
   const data = (($("#alvData") && $("#alvData").value) || hojeISO());
-  const area = temArea(w) ? Math.round(w.area * pct) / 100 : null;
+  const s = servicoAtual();
+  const qtd = temPrevisto(w, s) ? Math.round(previsto(w, s) * pct) / 100 : null;
+  const area = s === "elevacao" ? qtd : null;
+  const metros = s === "marcacao" ? qtd : null;
 
   botao.disabled = true;
   diz("#alvMsg", "Gravando…");
   try{
-    await gravarApontamento({ pavimento:w.pav, parede:w.codigo, data:data,
-                              percentual:pct, area_m2:area, equipe:equipe });
-    est.situacao[w.id] = { pavimento:w.pav, parede:w.codigo, data:data,
-                           percentual:pct, area_m2:area, equipe:equipe };
+    await gravarApontamento({ pavimento:w.pav, parede:w.codigo, servico:s, data:data,
+                              percentual:pct, area_m2:area, metros_m:metros, equipe:equipe });
+    est.situacao[w.id + "__" + s] = { pavimento:w.pav, parede:w.codigo, servico:s, data:data,
+                                      percentual:pct, area_m2:area, metros_m:metros, equipe:equipe };
     historico = await lerHistorico(w.pav, w.codigo).catch(function(){ return historico; });
     repintar();
     montar(w, false);
-    diz("#alvMsg", "Registrado: " + pct + "%" + (area !== null ? " · " + nf(area) + " m²" : "") +
+    diz("#alvMsg", nomeServico(s) + " registrada: " + pct + "%" +
+                   (qtd !== null ? " · " + nf(qtd) + " " + unidade(s) : "") +
                    (equipe ? " · " + equipe : "") + " em " + dataCurta(data) + ".");
   }catch(e){
     diz("#alvMsg", mensagemErro(e), true);

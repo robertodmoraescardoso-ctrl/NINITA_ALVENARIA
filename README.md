@@ -65,6 +65,46 @@ dois arquivos de `assets/dados/` junto com o PNG — não mexe no banco.
 
 ---
 
+## Dois serviços, duas unidades
+
+A alvenaria se mede de dois jeitos, e o painel trata os dois como
+serviços separados — o seletor no alto da página troca entre eles, e
+mapa, indicadores, prazos e produção seguem o que estiver escolhido:
+
+| Serviço | O que é | Unidade | De onde vem o previsto |
+|---|---|---|---|
+| **Levante** | subir a parede | m² | tabelas QUANTITATIVO das elevações (soma modular dos blocos) |
+| **Marcação** | a 1ª fiada | metro linear | `LEV_COTAÇÃO_M² ALVENARIA DETALHADO_R00.xlsx`, aba MEMORIA |
+
+Cada parede guarda um apontamento por serviço: marcar não conclui o
+levante, e o histórico mostra os dois lado a lado, etiquetados.
+
+**O metro linear não cobre tudo.** A planilha de cotação traz só as
+paredes `PR` do térreo, do tipo e da cobertura:
+
+| Pavimento | Peças | Com metro linear |
+|---|---|---|
+| Semienterrado | 84 | 0 |
+| Térreo | 166 | 119 |
+| Tipo (cada) | 138 | 104 |
+| Academia | 5 | 0 |
+| Cobertura | 189 | 123 (falta a PR039) |
+
+Os shafts não constam dela. Onde não há comprimento, a marcação só
+pode ser apontada como concluída ou não, sem metros — do mesmo jeito
+que o levante nos pavimentos sem elevação publicada.
+
+> **Atenção à área.** A planilha de cotação também traz m², calculado
+> por comprimento × altura − vãos. **Não é o m² do painel**, que vem da
+> contagem de blocos das elevações. Os totais ficam perto (2,8% no
+> térreo, 2,9% no tipo), mas parede a parede há divergências grandes:
+> cerca de 18% delas diferem mais de 15%, e algumas chegam a dobrar.
+> O painel usa a planilha **apenas para o metro linear**. Se for cotar
+> pela planilha e medir pelo painel, os dois números não vão fechar —
+> vale decidir qual é a referência antes de fechar contrato.
+
+---
+
 ## Quem entra e o que pode fazer
 
 Duas coisas separadas:

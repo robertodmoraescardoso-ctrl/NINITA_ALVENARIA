@@ -1,6 +1,6 @@
 import { $, esc } from "../ui.js";
 import { lerApontamentos } from "./nuvem.js";
-import { dataCurta, est, hojeISO, m2Executado, meuNome, nf, ni, percentual, producaoPorEquipe, ROTULO, status, temArea, visiveis } from "./modelo.js";
+import { SERVICOS, dataCurta, est, executado, hojeISO, linearDe, m2Executado, meuNome, nf, ni, nomeServico, percentual, previsto, producaoPorEquipe, ROTULO, status, temArea, temPrevisto, unidade, visiveis } from "./modelo.js";
 
 /* ------------------------------------------------------------
    PAINÉIS — indicadores, filtros, prazos, equipes e material
@@ -11,21 +11,24 @@ const COR = { ok:"var(--alv-ok)", andamento:"var(--alv-andamento)", atraso:"var(
 
 /* ---------- barra de pavimentos ---------- */
 export function desenharPavimentos(){
+  const un = unidade();
   $("#alvPavs").innerHTML = est.pavimentos.map(function(p){
     const lista = est.porPavimento[p.c] || [];
-    const prev = lista.reduce(function(s,w){ return s + (temArea(w) ? w.area : 0); }, 0);
-    const feito = lista.reduce(function(s,w){ return s + m2Executado(w); }, 0);
+    const prev = lista.reduce(function(s,w){ return s + (temPrevisto(w) ? previsto(w) : 0); }, 0);
+    const feito = lista.reduce(function(s,w){ return s + executado(w); }, 0);
     const pc = prev > 0 ? Math.round(feito/prev*100) : null;
     return '<button type="button" class="alv-pav" data-pav="' + p.c + '" aria-pressed="' + (p.c === est.pav) + '">' +
-      "<b>" + esc(p.n) + "</b><i>" + lista.length + " par · " + (pc === null ? "s/ m²" : pc + "%") + "</i></button>";
+      "<b>" + esc(p.n) + "</b><i>" + lista.length + " par · " +
+      (pc === null ? "s/ " + un : pc + "%") + "</i></button>";
   }).join("");
 }
 
 /* ---------- indicadores ---------- */
 export function desenharIndicadores(){
   const lista = est.porPavimento[est.pav] || [];
-  const prev = lista.reduce(function(s,w){ return s + (temArea(w) ? w.area : 0); }, 0);
-  const feito = lista.reduce(function(s,w){ return s + m2Executado(w); }, 0);
+  const un = unidade();
+  const prev = lista.reduce(function(s,w){ return s + (temPrevisto(w) ? previsto(w) : 0); }, 0);
+  const feito = lista.reduce(function(s,w){ return s + executado(w); }, 0);
   const pc = prev > 0 ? feito/prev*100 : 0;
   const prontas = lista.filter(function(w){ return status(w) === "ok"; }).length;
   const atrasadas = lista.filter(function(w){ return status(w) === "atraso"; }).length;
@@ -33,7 +36,8 @@ export function desenharIndicadores(){
   const semResp = lista.filter(function(w){ const p = est.plano[w.id]; return !p || !p.responsavel; }).length;
 
   $("#alvIndicadores").innerHTML =
-    ind(prev > 0 ? nf(pc,1) + "%" : "—", "Executado", nf(feito) + " de " + nf(prev) + " m²") +
+    ind(prev > 0 ? nf(pc,1) + "%" : "—", SERVICOS[est.servico].rotuloExec,
+        nf(feito) + " de " + nf(prev) + " " + un) +
     ind(prontas + " / " + lista.length, "Paredes concluídas", semApont + " sem apontamento") +
     ind(atrasadas, "Fora do prazo", atrasadas ? "ver aba Prazos" : "nenhuma atrasada", atrasadas ? "ind--atrasado" : "") +
     ind(semResp, "Sem responsável", "de " + lista.length + " paredes");
@@ -61,7 +65,7 @@ export function desenharFiltros(){
     ["andamento", "Em execução", "andamento", conta.andamento || 0],
     ["ok", "Concluídas", "ok", conta.ok || 0],
     ["atraso", "Fora do prazo", "atraso", conta.atraso || 0],
-    ["semquant", "Sem m²", "semquant", conta.semquant || 0],
+    ["semquant", "Sem " + unidade(), "semquant", conta.semquant || 0],
     ["avisos", "Com aviso", null, comAviso]
   ];
   if(meuNome()) defs.push(["minhas", "Minhas", null, minhas]);
@@ -256,7 +260,8 @@ export function desenharPerfis(){
 export function desenharProducao(){
   const destino = $("#alvEquipesProd");
   if(!destino) return;
-  const prod = producaoPorEquipe(apontamentosLidos || [], est.periodoDe, est.periodoAte);
+  const prod = producaoPorEquipe(apontamentosLidos || [], est.periodoDe, est.periodoAte, est.servico);
+  const un = unidade();
   const nomes = Object.keys(prod.equipes).sort(function(a,b){
     return prod.equipes[b].m2 - prod.equipes[a].m2;
   });
@@ -275,7 +280,7 @@ export function desenharProducao(){
 
   const tabela = nomes.length
     ? '<div class="alv-tabela-rolante"><table class="alv-tabela">' +
-        "<thead><tr><th>Equipe</th><th>m² no período</th><th>m²/dia</th><th>Dias</th>" +
+        "<thead><tr><th>Equipe</th><th>" + un + " no período</th><th>" + un + "/dia</th><th>Dias</th>" +
         "<th>Paredes</th><th>Lanç.</th></tr></thead><tbody>" +
         nomes.map(function(k){
           const g = prod.equipes[k], dias = Object.keys(g.dias).length;
@@ -307,7 +312,7 @@ function carteiraPorResponsavel(){
     if(!p || !p.responsavel) return;
     const k = p.responsavel.trim();
     const r = porResp[k] || (porResp[k] = { n:0, m2:0, prev:0, atraso:0, ok:0 });
-    r.n++; r.m2 += m2Executado(w); r.prev += temArea(w) ? w.area : 0;
+    r.n++; r.m2 += executado(w); r.prev += temPrevisto(w) ? previsto(w) : 0;
     const s = status(w);
     if(s === "atraso") r.atraso++;
     if(s === "ok") r.ok++;
@@ -324,7 +329,7 @@ function carteiraPorResponsavel(){
           return '<div class="alv-linha">' +
             '<span class="alv-linha__meio" style="color:var(--texto);font-weight:600">' + esc(k) + "</span>" +
             '<span class="alv-linha__fim" style="width:72px">' + r.n + " par</span>" +
-            '<span class="alv-linha__fim" style="width:100px">' + nf(r.m2,0) + "/" + nf(r.prev,0) + " m²</span>" +
+            '<span class="alv-linha__fim" style="width:100px">' + nf(r.m2,0) + "/" + nf(r.prev,0) + " " + unidade() + "</span>" +
             (r.atraso ? '<span class="alv-selo atraso">' + r.atraso + " atras.</span>"
                       : '<span class="alv-selo ok">' + r.ok + " ok</span>") +
           "</div>";
@@ -336,26 +341,47 @@ function carteiraPorResponsavel(){
 export function desenharMaterial(){
   const lista = (est.porPavimento[est.pav] || []).filter(function(w){ return w.sku; });
   const alvo = $("#alvMaterial");
-  if(!lista.length){
-    alvo.innerHTML = '<div class="vazio">Este pavimento não tem quantitativo publicado: ' +
-      'sem elevação no ConstruCode, não há tabela de material.</div>';
-    return;
-  }
+
   const previsto = {}, assentado = {};
   lista.forEach(function(w){
-    const f = percentual(w)/100;
+    /* o bloco sobe a parede: o que conta aqui é o levante */
+    const f = percentual(w, "elevacao")/100;
     for(const k in w.sku){
       previsto[k] = (previsto[k] || 0) + w.sku[k];
       assentado[k] = (assentado[k] || 0) + w.sku[k]*f;
     }
   });
+  /* marcação se mede em metro linear, não em bloco: o resumo do
+     comprimento vem antes da tabela de material */
+  const lin = linearDe(est.porPavimento[est.pav] || []);
+  const blocoLinear =
+    '<h2 class="alv-titulo">Marcação · ' + esc(est.pavPorCodigo[est.pav].n) + "</h2>" +
+    (lin.total > 0
+      ? '<div class="indicadores" style="margin-bottom:8px">' +
+          ind(nf(lin.total,1) + " m", "Metro linear previsto", "soma das paredes levantadas") +
+          ind(nf(lin.falta,1) + " m", "Falta marcar", "desconta o que já foi apontado") +
+        "</div>"
+      : '<div class="vazio">Nenhuma peça deste pavimento tem comprimento levantado.</div>') +
+    (lin.sem
+      ? '<div class="alv-msg">' + lin.sem + " peça(s) sem comprimento na planilha de cotação " +
+        "(os shafts, o semienterrado e a academia não constam dela) ficam fora desta conta.</div>"
+      : "");
+
+  if(!lista.length){
+    alvo.innerHTML = blocoLinear +
+      '<h2 class="alv-titulo">Levante · material</h2>' +
+      '<div class="vazio">Este pavimento não tem quantitativo publicado: ' +
+      "sem elevação no ConstruCode, não há tabela de material.</div>";
+    return;
+  }
+
   const ordem = Object.keys(previsto).map(Number).sort(function(a,b){ return a-b; });
   const ehBloco = function(i){ return String(est.skus[i]).indexOf("TELA") !== 0; };
   const soma = function(arr, obj){ return arr.reduce(function(s,i){ return s + (obj[i] || 0); }, 0); };
   const blocos = ordem.filter(ehBloco), telas = ordem.filter(function(i){ return !ehBloco(i); });
 
-  alvo.innerHTML =
-    '<h2 class="alv-titulo">Material · ' + esc(est.pavPorCodigo[est.pav].n) + "</h2>" +
+  alvo.innerHTML = blocoLinear +
+    '<h2 class="alv-titulo">Levante · material · ' + esc(est.pavPorCodigo[est.pav].n) + "</h2>" +
     '<div class="alv-tabela-rolante"><table class="alv-tabela">' +
       "<thead><tr><th>SKU</th><th>Previsto (un)</th><th>Estimado assentado</th><th>Saldo</th></tr></thead><tbody>" +
       ordem.map(function(i){

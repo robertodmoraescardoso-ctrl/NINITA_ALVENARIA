@@ -26,6 +26,7 @@ export const est = {
      apontar em peça que não está na tela é pedido de engano. */
   selecionando: false, selecao: {}, loteAberto: false,
   periodoDe: "", periodoAte: "",
+  servico: "elevacao",   /* elevacao (levante, m²) ou marcacao (1ª fiada, m) */
   conectado: false, podeGravar: false, aviso: ""
 };
 
@@ -38,8 +39,24 @@ export const AVISOS = {
 
 export const ROTULO = {
   ok: "Concluída", andamento: "Em execução", atraso: "Fora do prazo",
-  zero: "Não iniciada", semquant: "Sem m²"
+  zero: "Não iniciada", semquant: "Sem quantitativo"
 };
+
+/* ------------------------------------------------------------
+   Os dois serviços da alvenaria
+
+   Medem-se em unidades diferentes, e é isso que separa tudo o
+   que vem abaixo: elevação sai do quantitativo de blocos das
+   elevações da Tecomat, marcação sai do comprimento levantado na
+   planilha de cotação.
+   ------------------------------------------------------------ */
+export const SERVICOS = {
+  elevacao: { nome: "Levante",  unidade: "m²", campo: "area",   rotuloExec: "Levante executado" },
+  marcacao: { nome: "Marcação", unidade: "m",  campo: "linear", rotuloExec: "Marcação executada" }
+};
+export function servicoAtual(){ return SERVICOS[est.servico] ? est.servico : "elevacao"; }
+export function unidade(s){ return SERVICOS[s || servicoAtual()].unidade; }
+export function nomeServico(s){ return SERVICOS[s || servicoAtual()].nome; }
 
 export async function carregarCatalogo(){
   const [cat, pl] = await Promise.all([
@@ -64,13 +81,15 @@ export async function carregarCatalogo(){
     if(jogo){
       for(const w of jogo){
         lista.push({ id: p.c + "__" + w.c, pav: p.c, codigo: w.c, tipo: w.t,
-                     espessura: w.e, area: w.a, blocos: w.n, sku: w.b,
+                     espessura: w.e, area: w.a, linear: w.l, blocos: w.n, sku: w.b,
                      avisos: w.f || "", prancha: w.p });
       }
     } else {
-      for(const c of (cat.pendentes[p.jogo] || [])){
+      for(const item of (cat.pendentes[p.jogo] || [])){
+        const c = typeof item === "string" ? item : item.c;
+        const l = typeof item === "string" ? null : item.l;
         lista.push({ id: p.c + "__" + c, pav: p.c, codigo: c, tipo: c[0] === "S" ? "s" : "p",
-                     espessura: null, area: null, blocos: null, sku: null,
+                     espessura: null, area: null, linear: l, blocos: null, sku: null,
                      avisos: "", prancha: null });
       }
     }
@@ -87,23 +106,45 @@ export function hojeISO(){
   return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
 }
 
+/* quanto a peça tem de previsto no serviço: m² no levante,
+   metro linear na marcação */
+export function previsto(w, s){
+  const campo = SERVICOS[s || servicoAtual()].campo;
+  const v = w[campo];
+  return typeof v === "number" ? v : null;
+}
+export function temPrevisto(w, s){
+  const v = previsto(w, s);
+  return typeof v === "number" && v > 0;
+}
+/* mantido com o nome antigo porque o material e o mosaico falam
+   especificamente de área, não do serviço em foco */
 export function temArea(w){ return typeof w.area === "number" && w.area > 0; }
 
-export function percentual(w){
-  const s = est.situacao[w.id];
-  if(!s) return 0;
-  const n = Number(s.percentual);
+export function chaveSituacao(w, s){ return w.id + "__" + (s || servicoAtual()); }
+
+export function percentual(w, s){
+  const reg = est.situacao[chaveSituacao(w, s)];
+  if(!reg) return 0;
+  const n = Number(reg.percentual);
   return isNaN(n) ? 0 : Math.max(0, Math.min(100, n));
 }
 
+/* quantidade executada na unidade do serviço */
+export function executado(w, s){
+  const base = previsto(w, s);
+  if(!(typeof base === "number" && base > 0)) return 0;
+  return Math.round(base * percentual(w, s)) / 100;
+}
+/* atalho antigo, só para o que fala de m² */
 export function m2Executado(w){
-  return temArea(w) ? Math.round(w.area * percentual(w)) / 100 : 0;
+  return temArea(w) ? Math.round(w.area * percentual(w, "elevacao")) / 100 : 0;
 }
 
-export function status(w){
-  const p = percentual(w);
+export function status(w, s){
+  const p = percentual(w, s);
   if(p >= 100) return "ok";
-  if(!temArea(w)) return "semquant";
+  if(!temPrevisto(w, s)) return "semquant";
   const pl = est.plano[w.id];
   if(pl && pl.fim && pl.fim < hojeISO()) return "atraso";
   if(p > 0) return "andamento";
@@ -156,12 +197,24 @@ export function limparSelecao(){ est.selecao = {}; }
 /* soma o material das peças escolhidas, separando as que não têm
    quantitativo de projeto — elas não entram na conta e precisam
    aparecer como ressalva, não sumir */
+/* metro linear da seleção, para a marcação */
+export function linearDe(paredes){
+  let total = 0, falta = 0, sem = 0;
+  for(const w of paredes){
+    if(!temPrevisto(w, "marcacao")){ sem++; continue; }
+    total += w.linear;
+    falta += w.linear * Math.max(0, 100 - percentual(w, "marcacao")) / 100;
+  }
+  return { total: total, falta: falta, sem: sem };
+}
+
 export function materialDe(paredes){
   const previsto = {}, restante = {};
   let area = 0, semQuant = 0;
   for(const w of paredes){
     if(!w.sku){ semQuant++; continue; }
-    const falta = Math.max(0, 100 - percentual(w)) / 100;
+    /* material é do levante: bloco é o que sobe a parede */
+    const falta = Math.max(0, 100 - percentual(w, "elevacao")) / 100;
     if(temArea(w)) area += w.area;
     for(const k in w.sku){
       previsto[k] = (previsto[k] || 0) + w.sku[k];
@@ -183,9 +236,12 @@ export function materialDe(paredes){
    que assinou o lançamento mais novo — que é quem levantou aquele
    pedaço de parede.
    ------------------------------------------------------------ */
-export function producaoPorEquipe(apontamentos, de, ate){
+export function producaoPorEquipe(apontamentos, de, ate, servico){
+  const alvo = servico || servicoAtual();
+  const emMetros = alvo === "marcacao";
   const porPeca = {};
   for(const a of apontamentos){
+    if((a.servico || "elevacao") !== alvo) continue;
     const id = a.pavimento + "__" + a.parede;
     (porPeca[id] || (porPeca[id] = [])).push(a);
   }
@@ -201,7 +257,9 @@ export function producaoPorEquipe(apontamentos, de, ate){
     });
     let areaAnterior = 0, pctAnterior = 0;
     for(const a of lista){
-      const area = (a.area_m2 === null || a.area_m2 === undefined) ? null : Number(a.area_m2);
+      /* a quantidade é m² no levante e metro linear na marcação */
+      const bruto = emMetros ? a.metros_m : a.area_m2;
+      const area = (bruto === null || bruto === undefined) ? null : Number(bruto);
       const pct = Number(a.percentual) || 0;
       const incArea = area === null ? 0 : Math.max(0, area - areaAnterior);
       const incPct = Math.max(0, pct - pctAnterior);

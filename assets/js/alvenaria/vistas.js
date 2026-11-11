@@ -1,5 +1,5 @@
 import { $, esc } from "../ui.js";
-import { est, ROTULO, chavePlanta, m2Executado, nf, percentual, status, temArea, visiveis } from "./modelo.js";
+import { est, ROTULO, chavePlanta, executado, nf, nomeServico, percentual, previsto, status, temPrevisto, unidade, visiveis } from "./modelo.js";
 
 /* ------------------------------------------------------------
    VISTAS — a planta de 1ª fiada e o mosaico
@@ -172,8 +172,10 @@ export function irAtePeca(codigo){
 
 /* largura em colunas: a área de projeto vira peso visual */
 function colunas(w){
-  if(!temArea(w)) return 2;
-  const a = w.area;
+  if(!temPrevisto(w)) return 2;
+  /* o peso visual segue o serviço: m² no levante, metro na marcação.
+     As faixas do metro são menores porque o número é menor. */
+  const a = est.servico === "marcacao" ? previsto(w) * 2.2 : previsto(w);
   return a < 1 ? 1 : a < 3 ? 2 : a < 7 ? 3 : a < 14 ? 4 : 5;
 }
 
@@ -196,7 +198,8 @@ function peca(w){
       (marcas.length ? '<span class="alv-bloco__marca">' + marcas.join("") + "</span>" : "") +
       '<span class="alv-bloco__cod">' + esc(w.codigo) + '</span>' +
       '<span class="alv-bloco__m2">' +
-        (temArea(w) ? nf(w.area, 1) + " m²" : (w.area === 0 ? "s/ vedação" : "s/ quant.")) + '</span>' +
+        (temPrevisto(w) ? nf(previsto(w), 1) + " " + unidade()
+                        : (previsto(w) === 0 ? "s/ vedação" : "s/ quant.")) + '</span>' +
       (p > 0 ? '<span class="alv-bloco__pc">' + p + "%</span>" : "") +
     "</button>";
 }
@@ -214,10 +217,10 @@ export function desenharMosaico(){
 
   function secao(titulo, arr){
     if(!arr.length) return "";
-    const prev = arr.reduce(function(s,w){ return s + (temArea(w) ? w.area : 0); }, 0);
-    const feito = arr.reduce(function(s,w){ return s + m2Executado(w); }, 0);
+    const prev = arr.reduce(function(s,w){ return s + (temPrevisto(w) ? previsto(w) : 0); }, 0);
+    const feito = arr.reduce(function(s,w){ return s + executado(w); }, 0);
     return '<div class="alv-secao"><div class="alv-secao__cab"><h3>' + titulo + "</h3>" +
-      "<span>" + arr.length + (prev > 0 ? " · " + nf(feito,0) + "/" + nf(prev,0) + " m²" : "") + "</span></div>" +
+      "<span>" + arr.length + (prev > 0 ? " · " + nf(feito,0) + "/" + nf(prev,0) + " " + unidade() : "") + "</span></div>" +
       '<div class="alv-mosaico' + (est.selecionando ? " selecionando" : "") + '">' +
       arr.map(peca).join("") + "</div></div>";
   }

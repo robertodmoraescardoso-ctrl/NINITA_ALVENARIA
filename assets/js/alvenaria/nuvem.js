@@ -91,6 +91,8 @@ export async function lerPlano(){
   return r.data || [];
 }
 
+/* devolve os dois serviços juntos: a ficha mostra o histórico
+   inteiro da peça, com o serviço marcado em cada linha */
 export async function lerHistorico(pavimento, parede){
   const r = await sb.from("alvenaria_apontamentos")
     .select("*")
@@ -104,7 +106,7 @@ export async function lerHistorico(pavimento, parede){
 
 export async function lerApontamentos(){
   const r = await sb.from("alvenaria_apontamentos")
-    .select("pavimento,parede,data,percentual,area_m2,equipe,autor,criado_em")
+    .select("pavimento,parede,servico,data,percentual,area_m2,metros_m,equipe,autor,criado_em")
     .is("excluido_em", null)
     .order("data", { ascending:true })
     .order("criado_em", { ascending:true });
@@ -190,9 +192,11 @@ export async function gravarApontamento(ap){
   const r = await sb.from("alvenaria_apontamentos").insert({
     pavimento : ap.pavimento,
     parede    : ap.parede,
+    servico   : ap.servico || "elevacao",
     data      : ap.data,
     percentual: ap.percentual,
     area_m2   : (ap.area_m2 === null || ap.area_m2 === undefined) ? null : ap.area_m2,
+    metros_m  : (ap.metros_m === null || ap.metros_m === undefined) ? null : ap.metros_m,
     equipe    : ap.equipe || "",
     observacao: ap.observacao || "",
     autor     : (usuario && usuario.email) || ""

@@ -2,8 +2,8 @@ import { $, aviso, esc, fecharModal } from "../ui.js";
 import { abrirFicha, definirRepintar, fecharFicha, registrarApontamento, salvarPlanejamento } from "./ficha.js";
 import { abrirApontarLote, abrirMaterialLote, abrirPlanejarLote, definirRepintarLote,
          desenharBarraLote, registrarLote, salvarPlanoLote } from "./lote.js";
-import { alternarSelecao, carregarCatalogo, definirMeuNome, est, hojeISO, limparSelecao,
-         percentual, quantasSelecionadas, temArea } from "./modelo.js";
+import { alternarSelecao, carregarCatalogo, definirMeuNome, est, hojeISO, limparSelecao, previsto,
+         percentual, quantasSelecionadas, temArea, temPrevisto } from "./modelo.js";
 import { CHAVE_SB, URL_SB, apagarEquipe, apagarPerfil, cfgLocal, conectar, entrar, gravarEquipe,
          gravarPerfil, guardarCfgLocal, lerEquipes, lerPerfis, lerPlano, lerSituacao,
          problemaConfig, sair, sessaoAtual, usuario } from "./nuvem.js";
@@ -113,7 +113,11 @@ async function carregarDaNuvem(){
     }
     est.podeGravar = est.papel !== "gestor";
     est.situacao = {};
-    situacao.forEach(function(s){ est.situacao[s.pavimento + "__" + s.parede] = s; });
+    situacao.forEach(function(s){
+      /* antes da migração 003 a visão não tem 'servico': tudo o que
+         existe lá é levante, que é o que o painel media até agora */
+      est.situacao[s.pavimento + "__" + s.parede + "__" + (s.servico || "elevacao")] = s;
+    });
     est.plano = {};
     plano.forEach(function(p){
       est.plano[p.pavimento + "__" + p.parede] = { id:p.id, responsavel:p.responsavel, inicio:p.inicio, fim:p.fim };
@@ -134,6 +138,9 @@ async function carregarDaNuvem(){
 
 /* ---------- repintura ---------- */
 function repintar(){
+  Array.prototype.forEach.call(document.querySelectorAll("[data-servico]"), function(b){
+    b.setAttribute("aria-pressed", String(b.dataset.servico === est.servico));
+  });
   desenharPavimentos();
   desenharIndicadores();
 
@@ -180,7 +187,7 @@ definirRepintarLote(repintar);
 document.addEventListener("click", function(ev){
   const alvo = ev.target.closest(
     "[data-pav],[data-aba],[data-vista],[data-zoom],[data-inverter],[data-filtro],[data-peca]," +
-    "[data-pct],[data-lpct],[data-eqdel],[data-perfdel],[data-selecionar],[data-periodo]," +
+    "[data-pct],[data-lpct],[data-eqdel],[data-perfdel],[data-selecionar],[data-periodo],[data-servico]," +
     "#alvFechar,#alvRegistrar,#alvSalvarPlano,#btnEntrar,#btnSalvarCfg,#alvSair,#alvCortina," +
     "#alvEqAdd,#alvPerfAdd," +
     "#alvLoteMaterial,#alvLotePlanejar,#alvLoteApontar,#alvLoteLimpar,#alvLoteRegistrar,#alvLoteSalvarPlano");
@@ -246,6 +253,17 @@ document.addEventListener("click", function(ev){
     repintar();
     return;
   }
+  if(alvo.dataset.servico){
+    est.servico = alvo.dataset.servico;
+    guardarCfgLocal("servico", est.servico);
+    if(!est.aberta) limparSelecao();
+    repintar();
+    if(est.aba === "equipes") desenharProducao();
+    /* trocar de serviço dentro da ficha remonta a ficha, para o
+       formulário passar a falar da unidade certa */
+    if(est.aberta) abrirFicha(est.aberta);
+    return;
+  }
   if(alvo.dataset.zoom){
     const z = alvo.dataset.zoom;
     mudarZoom(z === "tudo" ? 1 : z === "mais" ? est.zoom*1.6 : est.zoom/1.6);
@@ -290,7 +308,8 @@ document.addEventListener("click", function(ev){
     if(!w) return;
     const r = $("#alvPct"); if(r) r.value = v;
     const n = $("#alvPctN"); if(n) n.value = v;
-    const m = $("#alvM2"); if(m && temArea(w)) m.value = (w.area*v/100).toFixed(2);
+    const m = $("#alvM2");
+    if(m && temPrevisto(w)) m.value = (previsto(w)*v/100).toFixed(2);
     Array.prototype.forEach.call($("#alvFicha").querySelectorAll("[data-pct]"), function(b){
       b.setAttribute("aria-pressed", String(Number(b.dataset.pct) === v));
     });
@@ -305,7 +324,7 @@ document.addEventListener("input", function(ev){
   if(alvo.id === "alvPct" && w){
     const v = Number(alvo.value);
     if($("#alvPctN")) $("#alvPctN").value = v;
-    if($("#alvM2") && temArea(w)) $("#alvM2").value = (w.area*v/100).toFixed(2);
+    if($("#alvM2") && temPrevisto(w)) $("#alvM2").value = (previsto(w)*v/100).toFixed(2);
     Array.prototype.forEach.call($("#alvFicha").querySelectorAll("[data-pct]"), function(b){
       b.setAttribute("aria-pressed", String(Number(b.dataset.pct) === v));
     });
@@ -313,11 +332,12 @@ document.addEventListener("input", function(ev){
   if(alvo.id === "alvPctN" && w){
     const v = Math.max(0, Math.min(100, Number(alvo.value) || 0));
     if($("#alvPct")) $("#alvPct").value = v;
-    if($("#alvM2") && temArea(w)) $("#alvM2").value = (w.area*v/100).toFixed(2);
+    if($("#alvM2") && temPrevisto(w)) $("#alvM2").value = (previsto(w)*v/100).toFixed(2);
   }
-  if(alvo.id === "alvM2" && w && temArea(w)){
-    const m = Math.max(0, Math.min(w.area, Number(alvo.value) || 0));
-    const v = Math.round(m/w.area*100);
+  if(alvo.id === "alvM2" && w && temPrevisto(w)){
+    const base = previsto(w);
+    const m = Math.max(0, Math.min(base, Number(alvo.value) || 0));
+    const v = Math.round(m/base*100);
     if($("#alvPct")) $("#alvPct").value = v;
     if($("#alvPctN")) $("#alvPctN").value = v;
   }
@@ -497,6 +517,8 @@ function salvarConfiguracao(){
   try{
     const v = cfgLocal("vista", "");
     if(v === "planta" || v === "mosaico") est.vista = v;
+    const sv = cfgLocal("servico", "");
+    if(sv === "elevacao" || sv === "marcacao") est.servico = sv;
     est.inverter = cfgLocal("inverter", "1") !== "0";
     const p = cfgLocal("pav", "");
 

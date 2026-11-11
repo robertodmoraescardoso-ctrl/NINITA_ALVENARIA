@@ -1,7 +1,8 @@
 import { $, esc } from "../ui.js";
 import { campoEquipe, fecharFicha, mostrarFolha, valorEquipe } from "./ficha.js";
-import { est, hojeISO, limparSelecao, m2Executado, materialDe, nf, ni, nomesDeEquipe,
-         percentual, quantasSelecionadas, selecionadas, temArea } from "./modelo.js";
+import { est, executado, hojeISO, limparSelecao, linearDe, materialDe, nf, ni, nomeServico,
+         percentual, previsto, quantasSelecionadas, selecionadas, servicoAtual, temArea,
+         temPrevisto, unidade } from "./modelo.js";
 import { gravarApontamento, gravarPlano } from "./nuvem.js";
 
 /* ------------------------------------------------------------
@@ -30,13 +31,13 @@ export function desenharBarraLote(){
   if(!ligada){ barra.innerHTML = ""; return; }
 
   const paredes = selecionadas();
-  const area = paredes.reduce(function(s,w){ return s + (temArea(w) ? w.area : 0); }, 0);
-  const feito = paredes.reduce(function(s,w){ return s + m2Executado(w); }, 0);
+  const area = paredes.reduce(function(s,w){ return s + (temPrevisto(w) ? previsto(w) : 0); }, 0);
+  const feito = paredes.reduce(function(s,w){ return s + executado(w); }, 0);
   const semQuant = paredes.filter(function(w){ return !w.sku; }).length;
 
   barra.innerHTML =
     '<div class="alv-lote__info"><b>' + n + (n === 1 ? " parede" : " paredes") + "</b>" +
-      "<span>" + (area > 0 ? nf(feito,0) + " de " + nf(area,0) + " m² · " : "") +
+      "<span>" + (area > 0 ? nf(feito,0) + " de " + nf(area,0) + " " + unidade() + " · " : "") +
       esc(est.pavPorCodigo[est.pav].n) +
       (semQuant ? " · " + semQuant + " sem quantitativo" : "") + "</span></div>" +
     '<div class="alv-lote__acoes">' +
@@ -74,6 +75,7 @@ export function abrirMaterialLote(){
   if(!paredes.length) return;
   est.loteAberto = true;
   const m = materialDe(paredes);
+  const lin = linearDe(paredes);
   const ordem = Object.keys(m.previsto).map(Number).sort(function(a,b){ return a-b; });
   const ehBloco = function(i){ return String(est.skus[i]).indexOf("TELA") !== 0; };
   const soma = function(arr, obj){ return arr.reduce(function(s,i){ return s + (obj[i] || 0); }, 0); };
@@ -104,6 +106,10 @@ export function abrirMaterialLote(){
           paredes.length + "</div></div>" +
         '<div class="alv-fato"><div class="alv-fato__r">Blocos no total</div><div class="alv-fato__v">' +
           ni(soma(blocos, m.previsto)) + "</div></div>" +
+        '<div class="alv-fato"><div class="alv-fato__r">Metro linear</div><div class="alv-fato__v">' +
+          (lin.total > 0 ? nf(lin.total,1) + " m" : "—") + "</div></div>" +
+        '<div class="alv-fato"><div class="alv-fato__r">Falta marcar</div><div class="alv-fato__v">' +
+          (lin.total > 0 ? nf(lin.falta,1) + " m" : "—") + "</div></div>" +
       "</div>" +
       (m.semQuant
         ? '<div class="alv-lote-aviso">' + m.semQuant + (m.semQuant === 1 ? " peça escolhida não tem" : " peças escolhidas não têm") +
@@ -124,7 +130,8 @@ export function abrirApontarLote(){
   const paredes = selecionadas();
   if(!paredes.length) return;
   est.loteAberto = true;
-  const semQuant = paredes.filter(function(w){ return !temArea(w); }).length;
+  const s = servicoAtual();
+  const semQuant = paredes.filter(function(w){ return !temPrevisto(w, s); }).length;
 
   $("#alvFicha").innerHTML =
     cabecalho("Apontar em lote", resumo(paredes)) +
@@ -142,10 +149,11 @@ export function abrirApontarLote(){
       '<div class="alv-grade" style="margin-top:10px">' +
         campoEquipe("alvLoteEquipe", "alvLoteEquipeOutra", "") +
       "</div>" +
-      '<div class="alv-lote-aviso">O percentual vale para cada parede, e o m² de cada uma sai ' +
-        "calculado pela sua própria área. Cada peça recebe o seu lançamento no histórico." +
+      '<div class="alv-lote-aviso">Lançando <b>' + nomeServico(s).toLowerCase() + "</b>. " +
+        "O percentual vale para cada parede, e " + unidade(s) + " de cada uma sai do seu próprio " +
+        "previsto. Cada peça recebe o seu lançamento no histórico." +
         (semQuant ? " " + semQuant + (semQuant === 1 ? " peça não tem" : " peças não têm") +
-          " área de projeto: nelas fica só o percentual." : "") + "</div>" +
+          " previsto neste serviço: nelas fica só o percentual." : "") + "</div>" +
       '<button type="button" class="alv-salvar" id="alvLoteRegistrar">Registrar em ' +
         paredes.length + (paredes.length === 1 ? " parede" : " paredes") + "</button>" +
       '<div class="alv-msg" id="alvLoteMsg"></div>' +
@@ -156,6 +164,7 @@ export function abrirApontarLote(){
 export async function registrarLote(botao){
   const paredes = selecionadas();
   if(!paredes.length) return;
+  const servico = servicoAtual();
   const pct = Math.max(0, Math.min(100, Math.round(Number(($("#alvLotePct")||{}).value) || 0)));
   const equipe = valorEquipe("alvLoteEquipe", "alvLoteEquipeOutra");
   const data = (($("#alvLoteData") && $("#alvLoteData").value) || hojeISO());
@@ -166,12 +175,15 @@ export async function registrarLote(botao){
   for(let i = 0; i < paredes.length; i++){
     const w = paredes[i];
     if(msg){ msg.className = "alv-msg"; msg.textContent = "Gravando " + (i+1) + " de " + paredes.length + "…"; }
-    const area = temArea(w) ? Math.round(w.area * pct) / 100 : null;
+    const qtd = temPrevisto(w, servico) ? Math.round(previsto(w, servico) * pct) / 100 : null;
+    const area = servico === "elevacao" ? qtd : null;
+    const metros = servico === "marcacao" ? qtd : null;
     try{
-      await gravarApontamento({ pavimento:w.pav, parede:w.codigo, data:data,
-                                percentual:pct, area_m2:area, equipe:equipe });
-      est.situacao[w.id] = { pavimento:w.pav, parede:w.codigo, data:data,
-                             percentual:pct, area_m2:area, equipe:equipe };
+      await gravarApontamento({ pavimento:w.pav, parede:w.codigo, servico:servico, data:data,
+                                percentual:pct, area_m2:area, metros_m:metros, equipe:equipe });
+      est.situacao[w.id + "__" + servico] = { pavimento:w.pav, parede:w.codigo, servico:servico,
+                                              data:data, percentual:pct, area_m2:area,
+                                              metros_m:metros, equipe:equipe };
       ok++;
     }catch(e){
       falhas.push(w.codigo + " (" + ((e && (e.message || e.code)) || "erro") + ")");
