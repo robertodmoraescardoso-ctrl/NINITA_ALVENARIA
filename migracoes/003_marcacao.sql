@@ -67,7 +67,12 @@ create index if not exists alvenaria_apont_servico_idx
 --    Antes: um registro por parede. Agora: um por parede e
 --    serviço, senão a marcação sobrescreveria a elevação.
 -- ------------------------------------------------------------
-create or replace view public.alvenaria_atual
+--    O 'create or replace' não serve aqui: ele não deixa inserir uma
+--    coluna no meio da visão (renomearia as de baixo). Como visão não
+--    guarda dado, derrubar e recriar não custa nada.
+drop view if exists public.alvenaria_atual;
+
+create view public.alvenaria_atual
 with (security_invoker = true) as
 select distinct on (pavimento, parede, servico)
   pavimento, parede, servico, data, percentual, area_m2, metros_m, equipe, autor, criado_em
