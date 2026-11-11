@@ -96,12 +96,40 @@ que o levante nos pavimentos sem elevação publicada.
 
 > **Atenção à área.** A planilha de cotação também traz m², calculado
 > por comprimento × altura − vãos. **Não é o m² do painel**, que vem da
-> contagem de blocos das elevações. Os totais ficam perto (2,8% no
-> térreo, 2,9% no tipo), mas parede a parede há divergências grandes:
+> contagem de blocos das elevações. Os totais ficam perto (2,7% no
+> térreo, 2,8% no tipo), mas parede a parede há divergências grandes:
 > cerca de 18% delas diferem mais de 15%, e algumas chegam a dobrar.
 > O painel usa a planilha **apenas para o metro linear**. Se for cotar
 > pela planilha e medir pelo painel, os dois números não vão fechar —
 > vale decidir qual é a referência antes de fechar contrato.
+
+### A maior divergência: PR001, PR002 e PR003 do térreo
+
+As três maiores diferenças da obra são as mesmas três paredes, idênticas
+entre si — o nicho da prumada hidráulica do térreo:
+
+| | comprimento | altura | vão | m² |
+|---|---|---|---|---|
+| Planilha | 2,58 m | **1,77 m** | 1,16 | 3,40 |
+| Projeto (blocos) | 2,58 m | 2,74 a 3,19 m | — | **7,07** |
+
+A diferença é de 3,67 m² por parede, 108%, 11,0 m² no térreo — **metade
+de toda a divergência daquele pavimento**.
+
+O erro está na altura da planilha, não no projeto:
+
+- **1,77 m é a única altura abaixo de 1,94 m em todo o térreo.** As
+  outras 108 paredes do andar usam de 2,35 m a 2,84 m, a maioria 2,38 m.
+- A planilha dá 7,07 m² ÷ 2,58 m = **2,74 m** de parede cheia (3,19 m se
+  o vão de 1,16 m² realmente existir). Qualquer um dos dois é coerente
+  com um pé-direito de térreo mais alto que o do tipo.
+- **A mesma parede no pavimento tipo fecha.** Lá a planilha usa 2,38 m
+  com janela de 1,50 m² → 4,64 m², e o projeto traz 4,66 m². A conta da
+  planilha está certa; só a altura do térreo ficou errada.
+
+Para conferir, a elevação é a prancha `POCO_ALV_PE_007_TE-PR001` no
+ConstruCode. Enquanto não for corrigida, o metro linear da planilha
+continua válido (2,58 m) — o que não serve é o m² dessas três peças.
 
 ---
 
