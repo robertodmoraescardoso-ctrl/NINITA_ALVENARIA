@@ -74,12 +74,19 @@ export async function carregarCatalogo(){
   est.porPavimento = {};
   est.pavPorCodigo = {};
 
+  /* Só paredes PR. O projeto também numera os shafts (SH), mas eles
+     ficam fora do controle de alvenaria desta obra: saem aqui, na
+     carga, e com isso somem do mapa, da planta, dos totais, do lote
+     e dos painéis de uma vez. O JSON continua com eles. */
+  const ehParede = function(c){ return /^PR/i.test(String(c || "")); };
+
   for(const p of cat.pavimentos){
     est.pavPorCodigo[p.c] = p;
     const lista = [];
     const jogo = cat.jogos[p.jogo];
     if(jogo){
       for(const w of jogo){
+        if(!ehParede(w.c)) continue;
         lista.push({ id: p.c + "__" + w.c, pav: p.c, codigo: w.c, tipo: w.t,
                      espessura: w.e, area: w.a, linear: w.l, blocos: w.n, sku: w.b,
                      avisos: w.f || "", prancha: w.p });
@@ -88,6 +95,7 @@ export async function carregarCatalogo(){
       for(const item of (cat.pendentes[p.jogo] || [])){
         const c = typeof item === "string" ? item : item.c;
         const l = typeof item === "string" ? null : item.l;
+        if(!ehParede(c)) continue;
         lista.push({ id: p.c + "__" + c, pav: p.c, codigo: c, tipo: c[0] === "S" ? "s" : "p",
                      espessura: null, area: null, linear: l, blocos: null, sku: null,
                      avisos: "", prancha: null });

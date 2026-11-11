@@ -375,7 +375,7 @@ export function desenharMaterial(){
       : '<div class="vazio">Nenhuma peça deste pavimento tem comprimento levantado.</div>') +
     (lin.sem
       ? '<div class="alv-msg">' + lin.sem + " peça(s) sem comprimento na planilha de cotação " +
-        "(os shafts, o semienterrado e a academia não constam dela) ficam fora desta conta.</div>"
+        "(o semienterrado e a academia não constam dela) ficam fora desta conta.</div>"
       : "");
 
   if(!lista.length){

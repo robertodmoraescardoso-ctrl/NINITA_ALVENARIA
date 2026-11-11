@@ -31,8 +31,8 @@ assets/
   css/estilo.css        casca: carimbo, abas, botões, portão de login
   css/alvenaria.css     planta, mosaico, ficha e listas
   dados/
-    alvenaria-catalogo.json   as 1.272 paredes, com área e blocos
-    alvenaria-plantas.json    as 699 marcações clicáveis das plantas
+    alvenaria-catalogo.json   as 1.272 peças do projeto (953 PR entram no sistema)
+    alvenaria-plantas.json    as marcações clicáveis das plantas (só as PR aparecem)
   img/plantas/          as cinco pranchas de 1ª fiada, em PNG
   js/ui.js              utilitários de tela
   js/alvenaria/
@@ -63,6 +63,28 @@ No **banco** fica só o que a obra produz: apontamento, planejamento e
 as equipes. Trocar uma prancha por revisão nova significa refazer os
 dois arquivos de `assets/dados/` junto com o PNG — não mexe no banco.
 
+### Só paredes PR
+
+O projeto numera dois tipos de peça: paredes (`PRxxx`) e shafts
+(`SHxxx`). **Este sistema controla só as PR.** Os shafts — 47 no térreo,
+34 em cada pavimento tipo, 65 na cobertura e 3 no semienterrado, 319 no
+prédio — saem na carga do catálogo (`carregarCatalogo`, em `modelo.js`)
+e com isso somem de tudo de uma vez: mosaico, pinos da planta, busca,
+totais, lote, prazos e material.
+
+Os dois JSON continuam com os shafts, intactos. Se um dia eles
+voltarem ao controle, é tirar o filtro `ehParede` — uma linha — e
+nada mais muda, porque os dados nunca saíram.
+
+| Pavimento | Paredes PR |
+|---|---|
+| Semienterrado | 81 |
+| Térreo | 119 |
+| Tipo (cada, ×6) | 104 |
+| Academia | 5 |
+| Cobertura | 124 |
+| **Prédio** | **953** |
+
 ---
 
 ## Dois serviços, duas unidades
@@ -84,13 +106,13 @@ paredes `PR` do térreo, do tipo e da cobertura:
 
 | Pavimento | Peças | Com metro linear |
 |---|---|---|
-| Semienterrado | 84 | 0 |
-| Térreo | 166 | 119 |
-| Tipo (cada) | 138 | 104 |
+| Semienterrado | 81 | 0 |
+| Térreo | 119 | 119 |
+| Tipo (cada) | 104 | 104 |
 | Academia | 5 | 0 |
-| Cobertura | 189 | 123 (falta a PR039) |
+| Cobertura | 124 | 123 (falta a PR039) |
 
-Os shafts não constam dela. Onde não há comprimento, a marcação só
+Onde não há comprimento, a marcação só
 pode ser apontada como concluída ou não, sem metros — do mesmo jeito
 que o levante nos pavimentos sem elevação publicada.
 

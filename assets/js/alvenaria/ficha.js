@@ -190,7 +190,7 @@ function blocoApontamento(w){
     }).join("") + "</div>";
 
   const semQuant = s === "marcacao"
-    ? "Esta peça não tem comprimento na planilha de cotação — shafts, semienterrado e academia não constam dela. Dá para marcar concluída ou não."
+    ? "Esta peça não tem comprimento na planilha de cotação — semienterrado e academia não constam dela. Dá para marcar concluída ou não."
     : (w.area === 0
         ? "A tabela de projeto não traz bloco de vedação nesta peça: não há m² para medir."
         : "Pavimento sem elevação publicada: sem quantitativo, só dá para marcar concluída ou não.");
