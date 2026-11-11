@@ -103,33 +103,50 @@ que o levante nos pavimentos sem elevação publicada.
 > pela planilha e medir pelo painel, os dois números não vão fechar —
 > vale decidir qual é a referência antes de fechar contrato.
 
-### A maior divergência: PR001, PR002 e PR003 do térreo
+### Onde as duas fontes brigam
 
-As três maiores diferenças da obra são as mesmas três paredes, idênticas
-entre si — o nicho da prumada hidráulica do térreo:
+Das 212 paredes que as duas fontes descrevem com número, **40 diferem
+mais de 15%**. O quadro abaixo diz o que explicaria cada diferença — não
+quem está certo, porque isso só a peça no andar resolve.
 
-| | comprimento | altura | vão | m² |
-|---|---|---|---|---|
-| Planilha | 2,58 m | **1,77 m** | 1,16 | 3,40 |
-| Projeto (blocos) | 2,58 m | 2,74 a 3,19 m | — | **7,07** |
+| O que explicaria | Peças | Efeito na obra¹ | Em módulo¹ |
+|---|---|---|---|
+| Equivale a altura | 9 | +85,9 m² | 89,3 m² |
+| Vão que a planilha não desconta | 7 | −60,5 m² | 60,5 m² |
+| Vão ocupa quase a parede toda | 15 | +1,5 m² | 39,3 m² |
+| Equivale a comprimento | 9 | −25,7 m² | 34,1 m² |
 
-A diferença é de 3,67 m² por parede, 108%, 11,0 m² no térreo — **metade
-de toda a divergência daquele pavimento**.
+¹ térreo uma vez + tipo seis vezes. *Efeito* soma com sinal, *módulo*
+ignora o sinal.
 
-O erro está na altura da planilha, não no projeto:
+**O total engana.** Na obra inteira a diferença líquida é de 1,2 m² —
+os erros se cancelam quase perfeitamente. Mas são **223 m² de quantidade
+assentados em peças onde as duas fontes discordam**. Para fechar o total
+de um contrato, tanto faz. Para medir peça a peça — que é o que o painel
+faz — não dá para ignorar.
 
-- **1,77 m é a única altura abaixo de 1,94 m em todo o térreo.** As
-  outras 108 paredes do andar usam de 2,35 m a 2,84 m, a maioria 2,38 m.
-- A planilha dá 7,07 m² ÷ 2,58 m = **2,74 m** de parede cheia (3,19 m se
-  o vão de 1,16 m² realmente existir). Qualquer um dos dois é coerente
-  com um pé-direito de térreo mais alto que o do tipo.
-- **A mesma parede no pavimento tipo fecha.** Lá a planilha usa 2,38 m
-  com janela de 1,50 m² → 4,64 m², e o projeto traz 4,66 m². A conta da
-  planilha está certa; só a altura do térreo ficou errada.
+**As maiores, em ordem:**
 
-Para conferir, a elevação é a prancha `POCO_ALV_PE_007_TE-PR001` no
-ConstruCode. Enquanto não for corrigida, o metro linear da planilha
-continua válido (2,58 m) — o que não serve é o m² dessas três peças.
+| Pavimento | Peça | L | H | vão | planilha | projeto | dif |
+|---|---|---|---|---|---|---|---|
+| Térreo | PR001, PR002, PR003 | 2,58 | 1,77 | 1,16 | 3,40 | **7,07** | +3,67 (108%) |
+| Tipo | PR066 | 3,14 | 2,38 | 0,00 | 7,47 | 4,12 | −3,35 |
+| Tipo | PR098 | 2,00 | 2,72 | 0,00 | 5,43 | 2,17 | −3,26 |
+| Térreo | PR040 | 4,97 | 2,41 | 6,10 | 5,89 | 3,04 | −2,85 |
+| Tipo | PR029, PR030, PR031 | 4,74 | 2,43 | 4,37 | 7,15 | **9,99** | +2,84 |
+
+Sobre a **PR001/002/003 do térreo** — o nicho da prumada, três peças
+idênticas: a altura de 1,77 m da planilha está certa, confirmada na
+obra. Então quem não fecha é o quantitativo da elevação, que traz 159
+blocos = 7,07 m² para uma parede de 2,58 × 1,77. Aquele quantitativo
+cobre mais do que esse trecho de 1,77 m. **São as três peças em que o
+previsto do painel está mais alto do que a parede real** — 11,0 m² no
+térreo. Enquanto a elevação não for revista, medir essas três pelo
+painel paga mais que o dobro.
+
+O diagnóstico peça a peça, com as três correções possíveis para cada
+uma (altura, vão e comprimento), está em
+`doc/divergencias-diagnostico.csv`.
 
 ---
 
