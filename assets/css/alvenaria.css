@@ -277,6 +277,16 @@
 .alv-hist__p{font-weight:700;flex:none;width:42px;font-variant-numeric:tabular-nums}
 .alv-hist__q{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--texto-2)}
 
+/* excluir lançamento: discreto até ser armado, e aí vermelho e por
+   extenso, para o segundo toque ser uma decisão e não um reflexo */
+.alv-hist__x{flex:none;min-width:30px;height:30px;padding:0 7px;border:1px solid var(--borda);
+  border-radius:8px;background:transparent;color:var(--texto-3);font-size:16px;line-height:1;
+  cursor:pointer;-webkit-tap-highlight-color:transparent}
+.alv-hist__x:hover{color:var(--st-atraso);border-color:var(--st-atraso)}
+.alv-hist__x.confirma{font-size:12px;font-weight:700;letter-spacing:.2px;padding:0 10px;
+  color:#fff;background:var(--st-atraso);border-color:var(--st-atraso)}
+.alv-hist__l.confirmando{background:rgba(220,70,70,.10);border-radius:8px}
+
 /* ---------------- listas (prazos, equipes) ---------------- */
 .alv-linhas{border:1px solid var(--linha);border-radius:var(--r);overflow:hidden;background:var(--fundo-2)}
 .alv-linha{display:flex;gap:10px;align-items:center;padding:10px 12px;border-top:1px solid var(--linha);min-width:0;min-height:var(--toque)}

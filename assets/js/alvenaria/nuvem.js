@@ -210,6 +210,23 @@ export async function gravarApontamento(ap){
   return r.data;
 }
 
+/* Exclusão lógica, como a das equipes: a linha continua no banco
+   com excluido_em preenchido, some da visão e das leituras, e dá
+   para trazer de volta no SQL se tiver sido engano. Não existe
+   DELETE em lugar nenhum deste sistema — medição apagada de
+   verdade não se audita depois. */
+export async function apagarApontamento(id){
+  const r = await sb.from("alvenaria_apontamentos")
+    .update({ excluido_em: new Date().toISOString() })
+    .eq("id", id)
+    .is("excluido_em", null)
+    .select("id");
+  if(r.error) throw r.error;
+  if(!r.data || !r.data.length)
+    throw new Error("O lançamento não foi encontrado ou já tinha sido excluído.");
+  return r.data[0];
+}
+
 /* Sem upsert: o índice único é parcial (where excluido_em is null)
    e o ON CONFLICT do PostgREST não sabe lidar com isso. */
 export async function gravarPlano(p){

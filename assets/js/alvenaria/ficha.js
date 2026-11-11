@@ -1,6 +1,6 @@
 import { $, esc } from "../ui.js";
 import { AVISOS, SERVICOS, dataCurta, definirMeuNome, diasDoIntervalo, est, executado, hojeISO, inicioDe, m2Executado, meuNome, nf, ni, nomeServico, nomesDeEquipe, percentual, periodoCurto, previsto, servicoAtual, temArea, temPrevisto, unidade } from "./modelo.js";
-import { gravarApontamento, gravarPlano, lerHistorico } from "./nuvem.js";
+import { apagarApontamento, gravarApontamento, gravarPlano, lerHistorico } from "./nuvem.js";
 
 /* ------------------------------------------------------------
    FICHA — o que o apontador vê ao tocar numa parede
@@ -14,12 +14,17 @@ let repintar = function(){};
 export function definirRepintar(fn){ repintar = fn || function(){}; }
 
 let historico = [];
+/* id do lançamento que está esperando o segundo toque para sair;
+   dois toques em vez de um alert(), que no celular é horrível e
+   no meio de uma folha deslizante some atrás do teclado */
+let aguardandoExclusao = "";
 
 export async function abrirFicha(id){
   const w = est.porId[id];
   if(!w) return;
   est.aberta = id;
   historico = [];
+  aguardandoExclusao = "";
   montar(w, est.conectado);
   mostrar();
   if(est.conectado){
@@ -134,7 +139,9 @@ function montar(w, carregando){
            const sv = l.servico === "marcacao" ? "marcacao" : "elevacao";
            const q = sv === "marcacao" ? l.metros_m : l.area_m2;
            const dd = diasDoIntervalo(inicioDe(l), l.data);
-           return '<div class="alv-hist__l"><span class="alv-hist__d">' +
+           const confirmando = l.id && String(l.id) === aguardandoExclusao;
+           return '<div class="alv-hist__l' + (confirmando ? " confirmando" : "") + '">' +
+             '<span class="alv-hist__d">' +
              esc(periodoCurto(inicioDe(l), l.data)) +
              (dd > 1 ? ' <i class="alv-hist__dias">' + dd + " dias</i>" : "") + "</span>" +
              '<span class="alv-selo ' + (sv === "marcacao" ? "andamento" : "ok") + '" style="margin-right:2px">' +
@@ -142,8 +149,19 @@ function montar(w, carregando){
              '<span class="alv-hist__p">' + Math.round(Number(l.percentual)) + "%</span>" +
              '<span class="alv-hist__q">' + esc(l.equipe || "sem equipe") +
              (q !== null && q !== undefined && Number(q) > 0 ? " · " + nf(q) + " " + SERVICOS[sv].unidade : "") +
-             (l.autor ? " · " + esc(l.autor) : "") + "</span></div>";
-         }).join("") + "</div>"
+             (l.autor ? " · " + esc(l.autor) : "") + "</span>" +
+             /* o gestor acompanha e não apaga nada */
+             (est.papel === "gestor" || !l.id ? ""
+               : confirmando
+                 ? '<button type="button" class="alv-hist__x confirma" data-apdel="' + esc(l.id) +
+                   '">Excluir?</button>'
+                 : '<button type="button" class="alv-hist__x" data-apdel="' + esc(l.id) +
+                   '" aria-label="Excluir este lançamento">&times;</button>') +
+             "</div>";
+         }).join("") + "</div>" +
+         (aguardandoExclusao
+           ? '<div class="alv-msg">Toque em <b>Excluir?</b> de novo para confirmar. ' +
+             "O lançamento sai da medição e o percentual da parede volta ao anterior.</div>" : "")
        : '<div class="alv-msg">Nenhum lançamento nesta parede ainda.</div>') +
   "</div>";
 
@@ -320,6 +338,60 @@ export async function registrarApontamento(botao){
   }finally{
     const b = $("#alvRegistrar");
     if(b) b.disabled = false;
+  }
+}
+
+/* ------------------------------------------------------------
+   Excluir um lançamento
+
+   Primeiro toque arma, segundo confirma. Depois de sair, a parede
+   volta ao lançamento anterior DAQUELE serviço — não a zero: se
+   alguém apontou 50% e depois 100% e o 100% estava errado, a
+   parede tem que voltar para 50%, não sumir do mapa.
+   ------------------------------------------------------------ */
+export async function excluirApontamento(botao){
+  const id = botao && botao.dataset && botao.dataset.apdel;
+  const w = est.porId[est.aberta];
+  if(!id || !w) return;
+
+  if(aguardandoExclusao !== String(id)){
+    aguardandoExclusao = String(id);
+    montar(w, false);
+    return;
+  }
+  aguardandoExclusao = "";
+
+  const alvo = historico.find(function(l){ return String(l.id) === String(id); });
+  botao.disabled = true;
+  diz("#alvMsg", "Excluindo…");
+  try{
+    await apagarApontamento(id);
+    historico = await lerHistorico(w.pav, w.codigo).catch(function(){
+      return historico.filter(function(l){ return String(l.id) !== String(id); });
+    });
+    recalcularSituacao(w);
+    repintar();
+    montar(w, false);
+    const s = alvo ? (alvo.servico === "marcacao" ? "marcacao" : "elevacao") : null;
+    diz("#alvMsg", "Lançamento excluído." +
+      (s ? " " + nomeServico(s) + " da peça voltou para " + percentual(w, s) + "%." : ""));
+  }catch(e){
+    montar(w, false);
+    diz("#alvMsg", mensagemErro(e), true);
+  }
+}
+
+/* refaz est.situacao desta peça a partir do histórico que sobrou,
+   um serviço de cada vez; sem lançamento, a chave sai do estado e
+   a parede volta a "não iniciada" */
+function recalcularSituacao(w){
+  for(const s in SERVICOS){
+    const resto = historico.filter(function(l){
+      return (l.servico === "marcacao" ? "marcacao" : "elevacao") === s;
+    });
+    const chave = w.id + "__" + s;
+    if(resto.length) est.situacao[chave] = resto[0];   /* lerHistorico já vem do mais novo */
+    else delete est.situacao[chave];
   }
 }
 

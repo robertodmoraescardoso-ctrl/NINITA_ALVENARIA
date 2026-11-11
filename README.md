@@ -225,6 +225,33 @@ lista), `serventes` é nova e `empresa` saiu da tela mas não foi apagada.
 
 ---
 
+## Desfazer: excluir equipe e excluir lançamento
+
+Nada neste sistema é apagado de verdade. **Não existe `DELETE` em
+lugar nenhum** — excluir preenche `excluido_em`, a linha some das
+leituras e continua no banco. Medição apagada para valer não se
+audita depois, e engano de apontador acontece.
+
+**Equipe** — o `×` à direita de cada equipe, na aba *Equipes*. A
+equipe sai da lista de *quem executou*, mas os lançamentos que ela
+já assinou continuam dizendo o nome dela no histórico e na produção.
+
+**Lançamento** — o `×` à direita de cada linha do *Histórico*, dentro
+da ficha da parede. São **dois toques**: o primeiro vira *Excluir?* em
+vermelho, o segundo confirma. Tocar em outro lançamento desarma o
+primeiro. Não há `alert()`: no celular, no meio de uma folha
+deslizante, o diálogo some atrás do teclado.
+
+Ao excluir, **a parede volta ao lançamento anterior daquele serviço**,
+não a zero. Se alguém apontou 50%, depois 100%, e o 100% estava
+errado, a peça volta a 50% e ao status *em execução*. Só quando não
+sobra nenhum lançamento do serviço é que ela volta a *não iniciada*.
+O outro serviço não é tocado: excluir um levante não mexe na marcação.
+
+O gestor não vê nenhum dos dois botões.
+
+---
+
 ## Produtividade por equipe
 
 Na aba **Equipes**, a produção é apurada num período que você escolhe

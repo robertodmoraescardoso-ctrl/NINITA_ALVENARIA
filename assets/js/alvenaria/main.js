@@ -1,5 +1,6 @@
 import { $, aviso, esc, fecharModal } from "../ui.js";
-import { abrirFicha, definirRepintar, fecharFicha, registrarApontamento, salvarPlanejamento } from "./ficha.js";
+import { abrirFicha, definirRepintar, excluirApontamento, fecharFicha, registrarApontamento,
+         salvarPlanejamento } from "./ficha.js";
 import { abrirApontarLote, abrirMaterialLote, abrirPlanejarLote, definirRepintarLote,
          desenharBarraLote, registrarLote, salvarPlanoLote } from "./lote.js";
 import { alternarSelecao, carregarCatalogo, composicao, definirMeuNome, diasDoIntervalo, est,
@@ -188,7 +189,7 @@ definirRepintarLote(repintar);
 document.addEventListener("click", function(ev){
   const alvo = ev.target.closest(
     "[data-pav],[data-aba],[data-vista],[data-zoom],[data-inverter],[data-filtro],[data-peca]," +
-    "[data-pct],[data-lpct],[data-eqdel],[data-perfdel],[data-selecionar],[data-periodo],[data-servico]," +
+    "[data-pct],[data-lpct],[data-eqdel],[data-perfdel],[data-apdel],[data-selecionar],[data-periodo],[data-servico]," +
     "#alvFechar,#alvRegistrar,#alvSalvarPlano,#btnEntrar,#btnSalvarCfg,#alvSair,#alvCortina," +
     "#alvEqAdd,#alvPerfAdd," +
     "#alvLoteMaterial,#alvLotePlanejar,#alvLoteApontar,#alvLoteLimpar,#alvLoteRegistrar,#alvLoteSalvarPlano");
@@ -199,6 +200,7 @@ document.addEventListener("click", function(ev){
     desenharProducao();
     return;
   }
+  if(alvo.dataset.apdel){ excluirApontamento(alvo); return; }
   if(alvo.id === "alvEqAdd"){ adicionarEquipe(alvo); return; }
   if(alvo.dataset.eqdel){ removerEquipe(alvo.dataset.eqdel); return; }
   if(alvo.id === "alvPerfAdd"){ adicionarPerfil(alvo); return; }
