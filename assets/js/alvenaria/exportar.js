@@ -1,5 +1,5 @@
 import { $ } from "../ui.js";
-import { apartamentosDe, aptosAtivos, est, hojeISO, paredesDosAptos, quantitativoMaterial } from "./modelo.js";
+import { apartamentosDe, aptosAtivos, est, hojeISO, quantitativoMaterial } from "./modelo.js";
 
 /* ------------------------------------------------------------
    EXPORTAR — quantitativo de material em planilha Excel (.xlsx)
@@ -97,7 +97,8 @@ function linhasPavimento(q){
 
 /* Saldo por apartamento: uma coluna por apartamento (os escolhidos,
    ou todos se nenhum foi escolhido) e, na última, o conjunto sem
-   repetir a parede de divisa — que é o que está na tabela de cima. */
+   o conjunto (ou o pavimento) — que é o que está na tabela de cima.
+   Cada parede está em um apartamento só: as colunas somam o total. */
 function linhasPorApartamento(q){
   const todos = apartamentosDe(q.pav);
   if(!todos.length || !q.ordem.length) return [];
@@ -108,18 +109,21 @@ function linhasPorApartamento(q){
     return soma(ids, qa.previsto) - Math.round(soma(ids, qa.assentado));
   };
   const L = [[], ["SALDO POR APARTAMENTO (un) · o que ainda falta subir"]];
-  L.push(["SKU"].concat(cols, [q.aptos.length ? "Conjunto, sem repetir divisa" : "Pavimento"]));
+  L.push(["SKU"].concat(cols, [q.aptos.length ? "Conjunto" : "Pavimento"]));
   q.ordem.forEach(function(i){
     L.push([est.skus[i]].concat(qs.map(function(qa){ return saldo(qa, i); }), [saldo(q, i)]));
   });
   L.push(["Total blocos"].concat(qs.map(function(qa){ return saldoTot(qa, q.blocos); }), [saldoTot(q, q.blocos)]));
   L.push(["Total telas"].concat(qs.map(function(qa){ return saldoTot(qa, q.telas); }), [saldoTot(q, q.telas)]));
 
-  const divisas = paredesDosAptos(q.pav, cols).filter(function(w){ return w.aptos.length > 1; });
+  const divisas = (est.porPavimento[q.pav] || []).filter(function(w){
+    return w.divisa && w.divisa.some(function(a){ return cols.indexOf(a) !== -1; });
+  });
   if(divisas.length){
-    L.push(["Paredes em cima da divisa entram nos dois apartamentos vizinhos — por isso a soma das colunas " +
-            "passa do total. São " + divisas.length + ": " +
-            divisas.map(function(w){ return w.codigo + " (" + w.aptos.join("/") + ")"; }).join(", ") + "."]);
+    L.push(["Paredes em cima da divisa ficam com o apartamento que vem antes na sequência 01A, 02A, 01B, 02B, " +
+            "01C, 02C: " + divisas.map(function(w){
+              return w.codigo + " → " + w.aptos[0] + " (divisa " + w.divisa.join("/") + ")";
+            }).join(", ") + "."]);
   }
   return L;
 }

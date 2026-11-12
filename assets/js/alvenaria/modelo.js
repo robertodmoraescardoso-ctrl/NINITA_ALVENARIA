@@ -115,7 +115,11 @@ export async function carregarCatalogo(){
       }
     }
     const divisao = est.aptos[p.jogo];
-    for(const w of lista) w.aptos = (divisao && divisao.paredes[w.codigo]) || [];
+    for(const w of lista){
+      w.aptos  = (divisao && divisao.paredes[w.codigo]) || [];
+      /* parede em cima da divisa: os dois vizinhos; ela conta só no 1º */
+      w.divisa = (divisao && divisao.divisas && divisao.divisas[w.codigo]) || null;
+    }
     est.porPavimento[p.c] = lista;
     for(const w of lista){ est.paredes.push(w); est.porId[w.id] = w; }
   }
@@ -290,11 +294,12 @@ export function materialDe(paredes){
 /* ------------------------------------------------------------
    Apartamentos
 
-   Cada parede PR do tipo sabe em que apartamento está (w.aptos).
-   A parede em cima da divisa — eixo do núcleo do bloco, ou a
-   parede única entre dois blocos — está nos DOIS vizinhos. Ao
-   juntar apartamentos, cada parede entra uma vez só: é união de
-   paredes, não soma de apartamentos.
+   Cada parede PR do tipo está em UM apartamento (w.aptos). A
+   parede em cima da divisa — eixo do núcleo do bloco, ou a parede
+   única entre os blocos B e C — fica com o apartamento que vem
+   antes na sequência 01A, 02A, 01B, 02B, 01C, 02C (o da esquerda
+   na planta), e w.divisa guarda os dois vizinhos, para a tela
+   avisar quem levou e quem não levou.
    ------------------------------------------------------------ */
 export function apartamentosDe(pav){
   const p = est.pavPorCodigo[pav];
@@ -321,13 +326,20 @@ export function paredesDosAptos(pav, sel){
     return w.aptos.some(function(a){ return sel.indexOf(a) !== -1; });
   });
 }
-/* paredes de divisa da seleção cujo vizinho NÃO está selecionado:
-   são as que também vão aparecer no material do outro */
-export function divisasCompartilhadas(paredes, sel){
-  if(!sel || !sel.length) return [];
-  return paredes.filter(function(w){
-    return w.aptos.length > 1 && w.aptos.some(function(a){ return sel.indexOf(a) === -1; });
-  });
+/* Divisas que atravessam a borda da seleção:
+   · levadas: estão na seleção e o outro vizinho ficou de fora —
+     o material delas sobe com a seleção;
+   · deixadas: ficaram com o vizinho de fora — não estão aqui. */
+export function divisasDaSelecao(pav, sel){
+  const r = { levadas: [], deixadas: [] };
+  if(!sel || !sel.length) return r;
+  for(const w of (est.porPavimento[pav] || [])){
+    if(!w.divisa) continue;
+    const dentro = w.divisa.filter(function(a){ return sel.indexOf(a) !== -1; }).length;
+    if(dentro !== 1) continue;
+    if(sel.indexOf(w.aptos[0]) !== -1) r.levadas.push(w); else r.deixadas.push(w);
+  }
+  return r;
 }
 
 /* Quantitativo de material de um pavimento: o que a aba Material
@@ -350,7 +362,7 @@ export function quantitativoMaterial(pav, sel){
   const ehBloco = function(i){ return String(est.skus[i]).indexOf("TELA") !== 0; };
   return {
     pav: pav, nome: (est.pavPorCodigo[pav] || {}).n || pav, pecas: lista.length,
-    aptos: sel.slice(), divisas: divisasCompartilhadas(todas, sel),
+    aptos: sel.slice(), divisas: divisasDaSelecao(pav, sel),
     ordem: ordem, previsto: previsto, assentado: assentado,
     blocos: ordem.filter(ehBloco), telas: ordem.filter(function(i){ return !ehBloco(i); }),
     linear: linearDe(todas)

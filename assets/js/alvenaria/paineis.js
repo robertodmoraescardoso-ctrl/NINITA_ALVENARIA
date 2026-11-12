@@ -374,12 +374,18 @@ function seletorApartamentos(lista, sel){
 }
 
 function avisoDivisas(q){
-  if(!q.divisas.length) return "";
-  const bl = blocosDe(q.divisas);
-  return '<div class="alv-msg">Inclui ' + q.divisas.length + " parede(s) em cima da divisa, que também " +
-    "entram no material do apartamento vizinho (" + ni(bl) + " blocos): " +
-    q.divisas.map(function(w){ return esc(w.codigo) + " (" + esc(w.aptos.join("/")) + ")"; }).join(", ") +
-    ". Selecionando os vizinhos juntos, cada uma conta uma vez só.</div>";
+  const lista = function(ws){
+    return ws.map(function(w){ return esc(w.codigo) + " (" + esc(w.divisa.join("/")) + ")"; }).join(", ");
+  };
+  const d = q.divisas;
+  return (d.levadas.length
+      ? '<div class="alv-msg">Inclui ' + d.levadas.length + " parede(s) de divisa que ficaram com esta seleção " +
+        "(" + ni(blocosDe(d.levadas)) + " blocos): " + lista(d.levadas) + ".</div>"
+      : "") +
+    (d.deixadas.length
+      ? '<div class="alv-msg">Não inclui ' + d.deixadas.length + " parede(s) de divisa que ficaram com o vizinho " +
+        "(" + ni(blocosDe(d.deixadas)) + " blocos): " + lista(d.deixadas) + ".</div>"
+      : "");
 }
 
 export function desenharMaterial(){

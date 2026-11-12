@@ -354,11 +354,12 @@ apartamento é editar uma linha ali.
 | Apartamento | Paredes | Blocos | Telas |
 |---|---|---|---|
 | 01A | 24 | 2.614 | 236 |
-| 02A | 19 | 2.416 | 171 |
+| 02A | 14 | 1.720 | 171 |
 | 01B | 19 | 2.471 | 160 |
-| 02B | 19 | 2.420 | 171 |
-| 01C | 19 | 2.484 | 160 |
-| 02C | 21 | 2.960 | 236 |
+| 02B | 14 | 1.724 | 171 |
+| 01C | 17 | 2.051 | 160 |
+| 02C | 16 | 2.264 | 236 |
+| **Pavimento** | **104** | **12.844** | **991** |
 
 ### O que ficou na divisa
 
@@ -371,19 +372,24 @@ conferidas na prancha, uma a uma:
 - **Perto do eixo de cada núcleo**, PR023 é do 02 (o rótulo está do
   lado do 01, a parede não); PR026, PR057 e PR058 são do 01. O mesmo
   vale para as equivalentes dos blocos B e C.
-- **17 paredes estão em cima da divisa e contam nos DOIS vizinhos**:
-  os eixos dos três núcleos (PR001, PR029, PR045, PR059, PR060 no
-  bloco A; PR002, PR030, PR046, PR077, PR078 no B; PR003, PR031,
-  PR050, PR093, PR094 no C) e a parede única entre os blocos B e C
-  (PR085, PR086). São 2.521 blocos por pavimento.
+- **17 paredes estão em cima da divisa**: os eixos dos três núcleos
+  (PR001, PR029, PR045, PR059, PR060 no bloco A; PR002, PR030, PR046,
+  PR077, PR078 no B; PR003, PR031, PR050, PR093, PR094 no C) e a
+  parede única entre os blocos B e C (PR085, PR086). São 2.521 blocos
+  por pavimento.
 
-Contar a divisa nos dois é de propósito: para subir material, faltar
-trava a equipe e sobrar não se perde — fica no mesmo andar, ao lado do
-vizinho que vai usar. **Ao marcar os dois vizinhos juntos, a parede
-entra uma vez só** (é união de paredes, não soma de apartamentos). Por
-isso a soma dos seis apartamentos (15.365) passa do pavimento
-(12.844): a diferença é exatamente a divisa. A tela avisa quais
-paredes da seleção são de divisa, e a planilha também.
+**A parede de divisa fica com um apartamento só: o que vem antes na
+sequência 01A, 02A, 01B, 02B, 01C, 02C** — o da esquerda na planta,
+que é quem chega primeiro nela se a execução seguir essa ordem.
+Decisão do Roberto em 12/11/2026. Com isso os seis apartamentos somam
+exatamente o pavimento. No JSON, a lista `divisas` guarda os dois
+vizinhos de cada uma: trocar o lado de uma parede é mudar o
+apartamento dela em `paredes`.
+
+A tela avisa as duas pontas: ao escolher o 01A, "inclui 5 paredes de
+divisa que ficaram com esta seleção"; ao escolher o 02A, "não inclui
+5 paredes de divisa que ficaram com o vizinho". Escolhendo os dois
+juntos, não há aviso. A planilha lista para onde foi cada uma.
 
 Na planilha, cada aba de pavimento tipo ganha a tabela **saldo por
 apartamento** (o que ainda falta subir), com uma coluna por
