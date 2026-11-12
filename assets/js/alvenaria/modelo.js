@@ -12,6 +12,9 @@ export const est = {
   /* catálogo */
   skus: [], pavimentos: [], paredes: [], porId: {}, porPavimento: {},
   plantas: {}, pavPorCodigo: {},
+  /* divisão em apartamentos, por jogo de pranchas (só o tipo, por
+     enquanto): { TP: { apartamentos:[...], paredes:{PRxxx:[...]} } } */
+  aptos: {},
   /* o que veio do banco */
   situacao: {},      /* "PAV__PRxxx" -> último apontamento */
   plano: {},         /* "PAV__PRxxx" -> {id, responsavel, inicio, fim} */
@@ -22,6 +25,10 @@ export const est = {
   /* tela */
   pav: "TE", aba: "mapa", vista: "planta", zoom: 3, plantaDe: null, inverter: true,
   filtro: "todas", busca: "", aberta: null,
+  /* apartamentos escolhidos na aba Material; vazio = pavimento
+     inteiro. Atravessa a troca de pavimento: 01A do 1º tipo e do
+     2º tipo são o mesmo apartamento em andares diferentes. */
+  aptosSel: [],
   /* seleção em lote, só no mosaico. Zera ao trocar de pavimento:
      apontar em peça que não está na tela é pedido de engano. */
   selecionando: false, selecao: {}, loteAberto: false,
@@ -59,16 +66,22 @@ export function unidade(s){ return SERVICOS[s || servicoAtual()].unidade; }
 export function nomeServico(s){ return SERVICOS[s || servicoAtual()].nome; }
 
 export async function carregarCatalogo(){
-  const [cat, pl] = await Promise.all([
+  const [cat, pl, ap] = await Promise.all([
     fetch("assets/dados/alvenaria-catalogo.json").then(function(r){
       if(!r.ok) throw new Error("catálogo (HTTP " + r.status + ")"); return r.json(); }),
     fetch("assets/dados/alvenaria-plantas.json").then(function(r){
-      if(!r.ok) throw new Error("plantas (HTTP " + r.status + ")"); return r.json(); })
+      if(!r.ok) throw new Error("plantas (HTTP " + r.status + ")"); return r.json(); }),
+    /* sem o arquivo de apartamentos o sistema funciona igual,
+       só não oferece a separação */
+    fetch("assets/dados/alvenaria-apartamentos.json")
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .catch(function(){ return null; })
   ]);
 
   est.skus = cat.skus;
   est.pavimentos = cat.pavimentos;
   est.plantas = pl;
+  est.aptos = (ap && ap.jogos) || {};
   est.paredes = [];
   est.porId = {};
   est.porPavimento = {};
@@ -101,6 +114,8 @@ export async function carregarCatalogo(){
                      avisos: "", prancha: null });
       }
     }
+    const divisao = est.aptos[p.jogo];
+    for(const w of lista) w.aptos = (divisao && divisao.paredes[w.codigo]) || [];
     est.porPavimento[p.c] = lista;
     for(const w of lista){ est.paredes.push(w); est.porId[w.id] = w; }
   }
@@ -272,12 +287,56 @@ export function materialDe(paredes){
   return { previsto: previsto, restante: restante, area: area, semQuant: semQuant };
 }
 
+/* ------------------------------------------------------------
+   Apartamentos
+
+   Cada parede PR do tipo sabe em que apartamento está (w.aptos).
+   A parede em cima da divisa — eixo do núcleo do bloco, ou a
+   parede única entre dois blocos — está nos DOIS vizinhos. Ao
+   juntar apartamentos, cada parede entra uma vez só: é união de
+   paredes, não soma de apartamentos.
+   ------------------------------------------------------------ */
+export function apartamentosDe(pav){
+  const p = est.pavPorCodigo[pav];
+  const d = p && est.aptos[p.jogo];
+  return (d && d.apartamentos) || [];
+}
+/* a seleção vale só no pavimento que tem esses apartamentos */
+export function aptosAtivos(pav){
+  const lista = apartamentosDe(pav);
+  return est.aptosSel.filter(function(a){ return lista.indexOf(a) !== -1; });
+}
+export function alternarApto(a){
+  if(!a){ est.aptosSel = []; return; }
+  const i = est.aptosSel.indexOf(a);
+  if(i === -1) est.aptosSel.push(a); else est.aptosSel.splice(i, 1);
+  /* na ordem da planta, não na ordem do clique */
+  const ordem = apartamentosDe(est.pav);
+  est.aptosSel.sort(function(x, y){ return ordem.indexOf(x) - ordem.indexOf(y); });
+}
+export function paredesDosAptos(pav, sel){
+  const todas = est.porPavimento[pav] || [];
+  if(!sel || !sel.length) return todas;
+  return todas.filter(function(w){
+    return w.aptos.some(function(a){ return sel.indexOf(a) !== -1; });
+  });
+}
+/* paredes de divisa da seleção cujo vizinho NÃO está selecionado:
+   são as que também vão aparecer no material do outro */
+export function divisasCompartilhadas(paredes, sel){
+  if(!sel || !sel.length) return [];
+  return paredes.filter(function(w){
+    return w.aptos.length > 1 && w.aptos.some(function(a){ return sel.indexOf(a) === -1; });
+  });
+}
+
 /* Quantitativo de material de um pavimento: o que a aba Material
    mostra e o que a planilha exporta saem desta mesma conta, para
    as duas nunca discordarem. Previsto é o de projeto; assentado é
    estimado (previsto × % de levante apontado em cada parede). */
-export function quantitativoMaterial(pav){
-  const todas = est.porPavimento[pav] || [];
+export function quantitativoMaterial(pav, sel){
+  sel = sel || [];
+  const todas = paredesDosAptos(pav, sel);
   const lista = todas.filter(function(w){ return w.sku; });
   const previsto = {}, assentado = {};
   for(const w of lista){
@@ -291,6 +350,7 @@ export function quantitativoMaterial(pav){
   const ehBloco = function(i){ return String(est.skus[i]).indexOf("TELA") !== 0; };
   return {
     pav: pav, nome: (est.pavPorCodigo[pav] || {}).n || pav, pecas: lista.length,
+    aptos: sel.slice(), divisas: divisasCompartilhadas(todas, sel),
     ordem: ordem, previsto: previsto, assentado: assentado,
     blocos: ordem.filter(ehBloco), telas: ordem.filter(function(i){ return !ehBloco(i); }),
     linear: linearDe(todas)

@@ -1,6 +1,6 @@
 import { $, esc } from "../ui.js";
 import { lerApontamentos } from "./nuvem.js";
-import { SERVICOS, composicao, dataCurta, est, executado, hojeISO, linearDe, m2Executado, meuNome, nf, ni, nomeServico, percentual, pessoasDaEquipe, previsto, producaoPorEquipe, quantitativoMaterial, ROTULO, status, temArea, temPrevisto, unidade, visiveis } from "./modelo.js";
+import { SERVICOS, apartamentosDe, aptosAtivos, composicao, dataCurta, est, executado, hojeISO, linearDe, m2Executado, meuNome, nf, ni, nomeServico, percentual, pessoasDaEquipe, paredesDosAptos, previsto, producaoPorEquipe, quantitativoMaterial, ROTULO, status, temArea, temPrevisto, unidade, visiveis } from "./modelo.js";
 
 /* ------------------------------------------------------------
    PAINÉIS — indicadores, filtros, prazos, equipes e material
@@ -349,22 +349,59 @@ function carteiraPorResponsavel(){
 }
 
 /* ---------- material ---------- */
+function blocosDe(paredes){
+  return paredes.reduce(function(s, w){ return s + (w.blocos || 0); }, 0);
+}
+
+/* chips de apartamento: vários ao mesmo tempo; "Pavimento inteiro"
+   zera a escolha. O número é o total de blocos de projeto. */
+function seletorApartamentos(lista, sel){
+  if(!lista.length) return "";
+  const todas = est.porPavimento[est.pav] || [];
+  const chip = function(valor, rotulo, ligado, blocos){
+    return '<button type="button" class="chip-filtro" data-apto="' + esc(valor) + '" aria-pressed="' + ligado + '">' +
+      esc(rotulo) + ' <span class="chip-filtro__n">' + ni(blocos) + " bl</span></button>";
+  };
+  return '<h2 class="alv-titulo">Apartamentos</h2>' +
+    '<div class="chips" role="group" aria-label="Apartamentos">' +
+      chip("", "Pavimento inteiro", !sel.length, blocosDe(todas)) +
+      lista.map(function(a){
+        return chip(a, a, sel.indexOf(a) !== -1, blocosDe(paredesDosAptos(est.pav, [a])));
+      }).join("") +
+    "</div>" +
+    '<div class="alv-msg" style="margin-top:0">Toque em um ou mais apartamentos: a marcação, o material ' +
+      "e a planilha passam a somar só as paredes deles.</div>";
+}
+
+function avisoDivisas(q){
+  if(!q.divisas.length) return "";
+  const bl = blocosDe(q.divisas);
+  return '<div class="alv-msg">Inclui ' + q.divisas.length + " parede(s) em cima da divisa, que também " +
+    "entram no material do apartamento vizinho (" + ni(bl) + " blocos): " +
+    q.divisas.map(function(w){ return esc(w.codigo) + " (" + esc(w.aptos.join("/")) + ")"; }).join(", ") +
+    ". Selecionando os vizinhos juntos, cada uma conta uma vez só.</div>";
+}
+
 export function desenharMaterial(){
   const alvo = $("#alvMaterial");
-  const q = quantitativoMaterial(est.pav);
+  const sel = aptosAtivos(est.pav);
+  const q = quantitativoMaterial(est.pav, sel);
   const lin = q.linear;
+  const nome = esc(q.nome) + (sel.length ? " · " + esc(sel.join(" + ")) : "");
 
   const exportar =
     '<div class="alv-exportar">' +
-      '<button type="button" class="btn btn--p" id="alvExpPav">Exportar ' + esc(q.nome) + " (.xlsx)</button>" +
+      '<button type="button" class="btn btn--p" id="alvExpPav">Exportar ' + nome + " (.xlsx)</button>" +
       '<button type="button" class="btn btn--p" id="alvExpPredio">Exportar prédio inteiro (.xlsx)</button>' +
       '<span class="alv-msg" id="alvExpMsg" role="status"></span>' +
     "</div>";
 
+  const topo = exportar + seletorApartamentos(apartamentosDe(est.pav), sel);
+
   /* marcação se mede em metro linear, não em bloco: o resumo do
      comprimento vem antes da tabela de material */
   const blocoLinear =
-    '<h2 class="alv-titulo">Marcação · ' + esc(q.nome) + "</h2>" +
+    '<h2 class="alv-titulo">Marcação · ' + nome + "</h2>" +
     (lin.total > 0
       ? '<div class="indicadores" style="margin-bottom:8px">' +
           ind(nf(lin.total,1) + " m", "Metro linear previsto", "soma das paredes levantadas") +
@@ -377,7 +414,7 @@ export function desenharMaterial(){
       : "");
 
   if(!q.pecas){
-    alvo.innerHTML = exportar + blocoLinear +
+    alvo.innerHTML = topo + blocoLinear +
       '<h2 class="alv-titulo">Levante · material</h2>' +
       '<div class="vazio">Este pavimento não tem quantitativo publicado: ' +
       "sem elevação no ConstruCode, não há tabela de material.</div>";
@@ -386,8 +423,8 @@ export function desenharMaterial(){
 
   const soma = function(arr, obj){ return arr.reduce(function(s,i){ return s + (obj[i] || 0); }, 0); };
 
-  alvo.innerHTML = exportar + blocoLinear +
-    '<h2 class="alv-titulo">Levante · material · ' + esc(q.nome) + "</h2>" +
+  alvo.innerHTML = topo + blocoLinear +
+    '<h2 class="alv-titulo">Levante · material · ' + nome + "</h2>" +
     '<div class="alv-tabela-rolante"><table class="alv-tabela">' +
       "<thead><tr><th>SKU</th><th>Previsto (un)</th><th>Estimado assentado</th><th>Saldo</th></tr></thead><tbody>" +
       q.ordem.map(function(i){
@@ -398,6 +435,7 @@ export function desenharMaterial(){
       linhaTotal("Blocos", soma(q.blocos, q.previsto), Math.round(soma(q.blocos, q.assentado))) +
       linhaTotal("Telas", soma(q.telas, q.previsto), Math.round(soma(q.telas, q.assentado))) +
       "</tfoot></table></div>" +
+    avisoDivisas(q) +
     '<div class="alv-msg">O assentado é estimado: quantidade de projeto × % apontado da parede. ' +
       "Nenhuma contagem de bloco é feita no apontamento. XVAR é bloco cortado, sem dimensão em projeto. " +
       "O bloco calha (CER-CAL) entra como alvenaria; isole-o para separar verga.</div>";

@@ -33,6 +33,7 @@ assets/
   dados/
     alvenaria-catalogo.json   as 1.272 peças do projeto (953 PR entram no sistema)
     alvenaria-plantas.json    as marcações clicáveis das plantas (só as PR aparecem)
+    alvenaria-apartamentos.json  em que apartamento fica cada parede do tipo
   img/plantas/          as cinco pranchas de 1ª fiada, em PNG
   js/ui.js              utilitários de tela
   js/alvenaria/
@@ -330,6 +331,65 @@ e Cobertura aparecem sem material porque não têm elevação publicada.
 
 O gerador de planilha (SheetJS 0.18.5, via cdnjs) só é baixado no
 primeiro clique. Sem internet, o botão avisa e não faz nada.
+
+---
+
+## Material por apartamento
+
+No pavimento tipo, a aba **Material** mostra chips com os seis
+apartamentos — **01A, 02A, 01B, 02B, 01C, 02C** — e o total de blocos
+de cada um. Dá para marcar **um ou vários**: a marcação (metro
+linear), a tabela de material e a planilha exportada passam a somar
+só as paredes deles. **Pavimento inteiro** volta ao total. A escolha
+atravessa a troca de pavimento: o 01A do 1º tipo e o do 4º tipo são o
+mesmo apartamento em andares diferentes.
+
+A divisão veio do croqui do Roberto (12/11/2026), casado com a prancha
+de 1ª fiada do tipo pelos eixos Y3, Y2 e Y1 — a escala bateu nos dois
+intervalos. A planta pintada por apartamento, para conferir, está em
+`doc/apartamentos-tipo.png`. A atribuição de cada parede está em
+`assets/dados/alvenaria-apartamentos.json`: mudar uma parede de
+apartamento é editar uma linha ali.
+
+| Apartamento | Paredes | Blocos | Telas |
+|---|---|---|---|
+| 01A | 24 | 2.614 | 236 |
+| 02A | 19 | 2.416 | 171 |
+| 01B | 19 | 2.471 | 160 |
+| 02B | 19 | 2.420 | 171 |
+| 01C | 19 | 2.484 | 160 |
+| 02C | 21 | 2.960 | 236 |
+
+### O que ficou na divisa
+
+O traço à mão não decide a parede que está em cima dele. Essas foram
+conferidas na prancha, uma a uma:
+
+- **Entre 02A e 01B a parede é dupla** (critério acústico): PR067/PR068
+  são a folha do 02A, PR069/PR070 a do 01B. O traço do croqui passava
+  um pouco à esquerda das duas folhas.
+- **Perto do eixo de cada núcleo**, PR023 é do 02 (o rótulo está do
+  lado do 01, a parede não); PR026, PR057 e PR058 são do 01. O mesmo
+  vale para as equivalentes dos blocos B e C.
+- **17 paredes estão em cima da divisa e contam nos DOIS vizinhos**:
+  os eixos dos três núcleos (PR001, PR029, PR045, PR059, PR060 no
+  bloco A; PR002, PR030, PR046, PR077, PR078 no B; PR003, PR031,
+  PR050, PR093, PR094 no C) e a parede única entre os blocos B e C
+  (PR085, PR086). São 2.521 blocos por pavimento.
+
+Contar a divisa nos dois é de propósito: para subir material, faltar
+trava a equipe e sobrar não se perde — fica no mesmo andar, ao lado do
+vizinho que vai usar. **Ao marcar os dois vizinhos juntos, a parede
+entra uma vez só** (é união de paredes, não soma de apartamentos). Por
+isso a soma dos seis apartamentos (15.365) passa do pavimento
+(12.844): a diferença é exatamente a divisa. A tela avisa quais
+paredes da seleção são de divisa, e a planilha também.
+
+Na planilha, cada aba de pavimento tipo ganha a tabela **saldo por
+apartamento** (o que ainda falta subir), com uma coluna por
+apartamento e, na última, o pavimento ou o conjunto escolhido.
+
+O **térreo** não tem divisão em apartamentos: o croqui é do tipo.
 
 ---
 

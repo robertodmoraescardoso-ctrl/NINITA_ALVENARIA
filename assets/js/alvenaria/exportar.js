@@ -1,5 +1,5 @@
 import { $ } from "../ui.js";
-import { est, hojeISO, quantitativoMaterial } from "./modelo.js";
+import { apartamentosDe, aptosAtivos, est, hojeISO, paredesDosAptos, quantitativoMaterial } from "./modelo.js";
 
 /* ------------------------------------------------------------
    EXPORTAR — quantitativo de material em planilha Excel (.xlsx)
@@ -9,6 +9,11 @@ import { est, hojeISO, quantitativoMaterial } from "./modelo.js";
      aberto na tela;
    · prédio: uma aba "Resumo" com SKU × pavimento e os totais, e
      depois uma aba por pavimento, igual à do escopo anterior.
+
+   Nos pavimentos divididos em apartamentos (o tipo), cada aba
+   ganha a tabela "saldo por apartamento": o que ainda falta subir
+   para cada um. A exportação do pavimento respeita os
+   apartamentos escolhidos na tela.
 
    Os números saem de quantitativoMaterial(), a mesma conta da
    tela. A biblioteca (SheetJS) só é baixada no primeiro clique:
@@ -60,7 +65,7 @@ function cabecalho(titulo){
 
 /* uma aba por pavimento: material do levante e metro linear da marcação */
 function linhasPavimento(q){
-  const L = cabecalho("Material · " + q.nome);
+  const L = cabecalho("Material · " + q.nome + (q.aptos.length ? " · " + q.aptos.join(" + ") : ""));
   L.push(["LEVANTE · MATERIAL"]);
   if(q.ordem.length){
     L.push(["SKU", "Previsto (un)", "Estimado assentado (un)", "Saldo (un)"]);
@@ -75,6 +80,7 @@ function linhasPavimento(q){
   } else {
     L.push(["Sem quantitativo publicado: este pavimento não tem elevação no ConstruCode."]);
   }
+  linhasPorApartamento(q).forEach(function(l){ L.push(l); });
   L.push([]);
   L.push(["MARCAÇÃO · METRO LINEAR"]);
   if(q.linear.total > 0){
@@ -86,6 +92,35 @@ function linhasPavimento(q){
   if(q.linear.sem) L.push(["Peças sem comprimento (fora da conta)", q.linear.sem]);
   L.push([]);
   L.push([NOTA]);
+  return L;
+}
+
+/* Saldo por apartamento: uma coluna por apartamento (os escolhidos,
+   ou todos se nenhum foi escolhido) e, na última, o conjunto sem
+   repetir a parede de divisa — que é o que está na tabela de cima. */
+function linhasPorApartamento(q){
+  const todos = apartamentosDe(q.pav);
+  if(!todos.length || !q.ordem.length) return [];
+  const cols = q.aptos.length ? q.aptos : todos;
+  const qs = cols.map(function(a){ return quantitativoMaterial(q.pav, [a]); });
+  const saldo = function(qa, i){ return (qa.previsto[i] || 0) - Math.round(qa.assentado[i] || 0); };
+  const saldoTot = function(qa, ids){
+    return soma(ids, qa.previsto) - Math.round(soma(ids, qa.assentado));
+  };
+  const L = [[], ["SALDO POR APARTAMENTO (un) · o que ainda falta subir"]];
+  L.push(["SKU"].concat(cols, [q.aptos.length ? "Conjunto, sem repetir divisa" : "Pavimento"]));
+  q.ordem.forEach(function(i){
+    L.push([est.skus[i]].concat(qs.map(function(qa){ return saldo(qa, i); }), [saldo(q, i)]));
+  });
+  L.push(["Total blocos"].concat(qs.map(function(qa){ return saldoTot(qa, q.blocos); }), [saldoTot(q, q.blocos)]));
+  L.push(["Total telas"].concat(qs.map(function(qa){ return saldoTot(qa, q.telas); }), [saldoTot(q, q.telas)]));
+
+  const divisas = paredesDosAptos(q.pav, cols).filter(function(w){ return w.aptos.length > 1; });
+  if(divisas.length){
+    L.push(["Paredes em cima da divisa entram nos dois apartamentos vizinhos — por isso a soma das colunas " +
+            "passa do total. São " + divisas.length + ": " +
+            divisas.map(function(w){ return w.codigo + " (" + w.aptos.join("/") + ")"; }).join(", ") + "."]);
+  }
   return L;
 }
 
@@ -133,6 +168,8 @@ function linhasResumo(qs){
   return L;
 }
 
+const LARG_PAV = [34, 14, 24, 12, 12, 12, 12, 26];
+
 function folha(XLSX, linhas, larguras){
   const ws = XLSX.utils.aoa_to_sheet(linhas);
   /* milhar com ponto, decimal com vírgula: o Excel aplica o
@@ -175,13 +212,14 @@ export async function exportarMaterial(escopo, botao){
       const larg = [26].concat(new Array(nCols).fill(11), [15, 19, 11]);
       XLSX.utils.book_append_sheet(wb, folha(XLSX, linhasResumo(qs), larg), nomeAba("Resumo", usados));
       qs.forEach(function(q){
-        XLSX.utils.book_append_sheet(wb, folha(XLSX, linhasPavimento(q), [34, 14, 24, 12]), nomeAba(q.nome, usados));
+        XLSX.utils.book_append_sheet(wb, folha(XLSX, linhasPavimento(q), LARG_PAV), nomeAba(q.nome, usados));
       });
       arquivo = "Material_Alvenaria_Predio_" + hojeISO() + ".xlsx";
     } else {
-      const q = quantitativoMaterial(est.pav);
-      XLSX.utils.book_append_sheet(wb, folha(XLSX, linhasPavimento(q), [34, 14, 24, 12]), nomeAba(q.nome, usados));
-      arquivo = "Material_Alvenaria_" + est.pav + "_" + hojeISO() + ".xlsx";
+      const sel = aptosAtivos(est.pav);
+      const q = quantitativoMaterial(est.pav, sel);
+      XLSX.utils.book_append_sheet(wb, folha(XLSX, linhasPavimento(q), LARG_PAV), nomeAba(q.nome, usados));
+      arquivo = "Material_Alvenaria_" + est.pav + (sel.length ? "_" + sel.join("-") : "") + "_" + hojeISO() + ".xlsx";
     }
 
     XLSX.writeFile(wb, arquivo, { compression: true });

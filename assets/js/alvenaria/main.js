@@ -3,7 +3,7 @@ import { abrirFicha, definirRepintar, excluirApontamento, fecharFicha, registrar
          salvarPlanejamento } from "./ficha.js";
 import { abrirApontarLote, abrirMaterialLote, abrirPlanejarLote, definirRepintarLote,
          desenharBarraLote, registrarLote, salvarPlanoLote } from "./lote.js";
-import { alternarSelecao, carregarCatalogo, composicao, definirMeuNome, diasDoIntervalo, est,
+import { alternarApto, alternarSelecao, carregarCatalogo, composicao, definirMeuNome, diasDoIntervalo, est,
          hojeISO, limparSelecao, listaDePessoas, previsto, percentual, quantasSelecionadas,
          temArea, temPrevisto, textoDePessoas, unidade } from "./modelo.js";
 import { CHAVE_SB, URL_SB, apagarEquipe, apagarPerfil, cfgLocal, conectar, entrar, gravarEquipe,
@@ -190,7 +190,7 @@ definirRepintarLote(repintar);
 document.addEventListener("click", function(ev){
   const alvo = ev.target.closest(
     "[data-pav],[data-aba],[data-vista],[data-zoom],[data-inverter],[data-filtro],[data-peca]," +
-    "[data-pct],[data-lpct],[data-eqdel],[data-perfdel],[data-apdel],[data-selecionar],[data-periodo],[data-servico]," +
+    "[data-pct],[data-lpct],[data-apto],[data-eqdel],[data-perfdel],[data-apdel],[data-selecionar],[data-periodo],[data-servico]," +
     "#alvFechar,#alvRegistrar,#alvSalvarPlano,#btnEntrar,#btnSalvarCfg,#alvSair,#alvCortina," +
     "#alvEqAdd,#alvPerfAdd,#alvExpPav,#alvExpPredio," +
     "#alvLoteMaterial,#alvLotePlanejar,#alvLoteApontar,#alvLoteLimpar,#alvLoteRegistrar,#alvLoteSalvarPlano");
@@ -202,6 +202,11 @@ document.addEventListener("click", function(ev){
     return;
   }
   if(alvo.dataset.apdel){ excluirApontamento(alvo); return; }
+  if(alvo.dataset.apto !== undefined){
+    alternarApto(alvo.dataset.apto);
+    desenharMaterial();
+    return;
+  }
   if(alvo.id === "alvExpPav" || alvo.id === "alvExpPredio"){
     exportarMaterial(alvo.id === "alvExpPredio" ? "predio" : "pavimento", alvo);
     return;
