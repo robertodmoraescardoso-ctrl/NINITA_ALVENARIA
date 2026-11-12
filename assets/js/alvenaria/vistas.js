@@ -1,5 +1,5 @@
 import { $, esc } from "../ui.js";
-import { est, ROTULO, chavePlanta, executado, nf, nomeServico, percentual, previsto, status, temPrevisto, unidade, visiveis } from "./modelo.js";
+import { aptosAtivos, est, ROTULO, chavePlanta, executado, nf, nomeServico, percentual, previsto, status, temPrevisto, unidade, visiveis } from "./modelo.js";
 
 /* ------------------------------------------------------------
    VISTAS — a planta de 1ª fiada e o mosaico
@@ -139,7 +139,7 @@ export function pintarPinos(){
   if(!tela) return;
   const vis = {};
   visiveis().forEach(function(w){ vis[w.id] = true; });
-  const filtrando = est.filtro !== "todas" || !!est.busca.trim();
+  const filtrando = est.filtro !== "todas" || !!est.busca.trim() || aptosAtivos(est.pav).length > 0;
   Array.prototype.forEach.call(tela.querySelectorAll(".alv-pino"), function(b){
     const w = est.porId[b.dataset.peca];
     if(!w) return;

@@ -1,6 +1,6 @@
 import { $, esc } from "../ui.js";
 import { lerApontamentos } from "./nuvem.js";
-import { SERVICOS, apartamentosDe, aptosAtivos, composicao, dataCurta, est, executado, hojeISO, linearDe, m2Executado, meuNome, nf, ni, nomeServico, percentual, pessoasDaEquipe, paredesDosAptos, previsto, producaoPorEquipe, quantitativoMaterial, ROTULO, status, temArea, temPrevisto, unidade, visiveis } from "./modelo.js";
+import { SERVICOS, apartamentosDe, aptosAtivos, composicao, dataCurta, est, executado, hojeISO, linearDe, m2Executado, meuNome, nf, ni, nomeServico, percentual, pessoasDaEquipe, paredesDosAptos, paredesEmFoco, previsto, producaoPorEquipe, quantitativoMaterial, ROTULO, status, temArea, temPrevisto, unidade, visiveis } from "./modelo.js";
 
 /* ------------------------------------------------------------
    PAINÉIS — indicadores, filtros, prazos, equipes e material
@@ -23,9 +23,31 @@ export function desenharPavimentos(){
   }).join("");
 }
 
+/* ---------- apartamentos no mapa ---------- */
+/* Mesma escolha da aba Material. Só aparece no pavimento dividido
+   em apartamentos; o número é a quantidade de paredes. */
+export function desenharAptosMapa(){
+  const alvo = $("#alvAptos");
+  if(!alvo) return;
+  const lista = apartamentosDe(est.pav);
+  alvo.classList.toggle("oculto", !lista.length);
+  if(!lista.length){ alvo.innerHTML = ""; return; }
+  const sel = aptosAtivos(est.pav);
+  const chip = function(valor, rotulo, ligado, n){
+    return '<button type="button" class="chip-filtro" data-apto="' + esc(valor) + '" aria-pressed="' + ligado + '">' +
+      esc(rotulo) + ' <span class="chip-filtro__n">' + n + "</span></button>";
+  };
+  alvo.innerHTML = '<span class="alv-chips__r">Apartamento</span>' +
+    chip("", "Pavimento inteiro", !sel.length, (est.porPavimento[est.pav] || []).length) +
+    lista.map(function(a){
+      return chip(a, a, sel.indexOf(a) !== -1, paredesDosAptos(est.pav, [a]).length);
+    }).join("");
+}
+
 /* ---------- indicadores ---------- */
 export function desenharIndicadores(){
-  const lista = est.porPavimento[est.pav] || [];
+  const lista = paredesEmFoco();
+  const sel = aptosAtivos(est.pav);
   const un = unidade();
   const prev = lista.reduce(function(s,w){ return s + (temPrevisto(w) ? previsto(w) : 0); }, 0);
   const feito = lista.reduce(function(s,w){ return s + executado(w); }, 0);
@@ -37,7 +59,7 @@ export function desenharIndicadores(){
 
   $("#alvIndicadores").innerHTML =
     ind(prev > 0 ? nf(pc,1) + "%" : "—", SERVICOS[est.servico].rotuloExec,
-        nf(feito) + " de " + nf(prev) + " " + un) +
+        nf(feito) + " de " + nf(prev) + " " + un + (sel.length ? " · " + sel.join(" + ") : "")) +
     ind(prontas + " / " + lista.length, "Paredes concluídas", semApont + " sem apontamento") +
     ind(atrasadas, "Fora do prazo", atrasadas ? "ver aba Prazos" : "nenhuma atrasada", atrasadas ? "ind--atrasado" : "") +
     ind(semResp, "Sem responsável", "de " + lista.length + " paredes");
@@ -50,7 +72,7 @@ function ind(numero, rotulo, detalhe, classe){
 
 /* ---------- filtros ---------- */
 export function desenharFiltros(){
-  const lista = est.porPavimento[est.pav] || [];
+  const lista = paredesEmFoco();
   const conta = {};
   lista.forEach(function(w){ const s = status(w); conta[s] = (conta[s] || 0) + 1; });
   const comAviso = lista.filter(function(w){ return !!w.avisos; }).length;

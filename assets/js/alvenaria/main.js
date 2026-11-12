@@ -9,7 +9,7 @@ import { alternarApto, alternarSelecao, carregarCatalogo, composicao, definirMeu
 import { CHAVE_SB, URL_SB, apagarEquipe, apagarPerfil, cfgLocal, conectar, entrar, gravarEquipe,
          gravarPerfil, guardarCfgLocal, lerEquipes, lerPerfis, lerPlano, lerSituacao,
          problemaConfig, sair, sessaoAtual, usuario } from "./nuvem.js";
-import { definirPeriodo, desenharEquipes, desenharFiltros, desenharIndicadores, desenharMaterial,
+import { definirPeriodo, desenharAptosMapa, desenharEquipes, desenharFiltros, desenharIndicadores, desenharMaterial,
          desenharPavimentos, desenharPerfis, desenharPrazos, desenharProducao } from "./paineis.js";
 import { alternarInversao, aplicarZoom, desenharMosaico, desenharPlanta, irAtePeca, mudarZoom, pintarPinos } from "./vistas.js";
 import { exportarMaterial } from "./exportar.js";
@@ -154,6 +154,7 @@ function repintar(){
   });
 
   if(est.aba === "mapa"){
+    desenharAptosMapa();
     desenharFiltros();
     const naPlanta = est.vista === "planta";
     $("#alvPlanta").classList.toggle("oculto", !naPlanta);
@@ -204,7 +205,7 @@ document.addEventListener("click", function(ev){
   if(alvo.dataset.apdel){ excluirApontamento(alvo); return; }
   if(alvo.dataset.apto !== undefined){
     alternarApto(alvo.dataset.apto);
-    desenharMaterial();
+    repintar();
     return;
   }
   if(alvo.id === "alvExpPav" || alvo.id === "alvExpPredio"){

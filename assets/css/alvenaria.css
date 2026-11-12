@@ -270,6 +270,8 @@
 /* exportar planilha: dois botões e o aviso na mesma linha, quebrando no celular */
 .alv-exportar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:16px 0 4px}
 .alv-exportar .alv-msg{margin-top:0}
+/* rótulo antes de uma fileira de chips (apartamento no mapa) */
+.alv-chips__r{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--texto-3);align-self:center;margin-right:2px}
 
 .alv-hist{display:flex;flex-direction:column}
 .alv-hist__l{display:flex;gap:9px;align-items:baseline;padding:7px 0;border-top:1px dotted var(--borda);font-size:13px}

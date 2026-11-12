@@ -223,9 +223,16 @@ export function chavePlanta(pavCodigo){
   return p ? p.jogo : null;
 }
 
+/* paredes do pavimento em foco, já recortadas pelos apartamentos
+   escolhidos (vale para indicadores, filtros, planta, mosaico e
+   material: a escolha é uma só) */
+export function paredesEmFoco(){
+  return paredesDosAptos(est.pav, aptosAtivos(est.pav));
+}
+
 /* paredes do pavimento em foco que passam pelo filtro e pela busca */
 export function visiveis(){
-  const lista = est.porPavimento[est.pav] || [];
+  const lista = paredesEmFoco();
   const q = est.busca.trim().toUpperCase();
   return lista.filter(function(w){
     if(q && w.codigo.indexOf(q) === -1) return false;
