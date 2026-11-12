@@ -380,19 +380,23 @@ function blocosDe(paredes){
 function seletorApartamentos(lista, sel){
   if(!lista.length) return "";
   const todas = est.porPavimento[est.pav] || [];
-  const chip = function(valor, rotulo, ligado, blocos){
+  /* pavimento sem quantitativo de blocos (semienterrado, cobertura):
+     o chip mostra quantas paredes, não "0 bl" */
+  const emBlocos = blocosDe(todas) > 0;
+  const chip = function(valor, rotulo, ligado, paredes){
+    const n = emBlocos ? ni(blocosDe(paredes)) + " bl" : paredes.length + " par";
     return '<button type="button" class="chip-filtro" data-apto="' + esc(valor) + '" aria-pressed="' + ligado + '">' +
-      esc(rotulo) + ' <span class="chip-filtro__n">' + ni(blocos) + " bl</span></button>";
+      esc(rotulo) + ' <span class="chip-filtro__n">' + n + "</span></button>";
   };
   return '<h2 class="alv-titulo">Apartamentos</h2>' +
     '<div class="chips" role="group" aria-label="Apartamentos">' +
-      chip("", "Pavimento inteiro", !sel.length, blocosDe(todas)) +
+      chip("", "Pavimento inteiro", !sel.length, todas) +
       lista.map(function(a){
-        return chip(a, a, sel.indexOf(a) !== -1, blocosDe(paredesDosAptos(est.pav, [a])));
+        return chip(a, a, sel.indexOf(a) !== -1, paredesDosAptos(est.pav, [a]));
       }).join("") +
     "</div>" +
     '<div class="alv-msg" style="margin-top:0">Toque em um ou mais apartamentos: a marcação, o material ' +
-      "e a planilha passam a somar só as paredes deles.</div>";
+      "e a planilha passam a somar só as paredes deles. A escolha vale também no Mapa.</div>";
 }
 
 function avisoDivisas(q){

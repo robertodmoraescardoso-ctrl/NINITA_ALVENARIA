@@ -336,10 +336,11 @@ primeiro clique. Sem internet, o botão avisa e não faz nada.
 
 ## Material por apartamento
 
-No pavimento tipo, a aba **Material** e a aba **Mapa** mostram chips
-com os seis apartamentos — **01A, 02A, 01B, 02B, 01C, 02C**. Dá para
-marcar **um ou vários**; **Pavimento inteiro** volta ao total. A
-escolha é uma só para o sistema todo:
+Todos os pavimentos, menos a academia, são divididos nos seis
+apartamentos — **01A, 02A, 01B, 02B, 01C, 02C**. A aba **Material** e
+a aba **Mapa** mostram chips com eles; dá para marcar **um ou
+vários**, e **Pavimento inteiro** volta ao total. A escolha é uma só
+para o sistema todo:
 
 - **Mapa:** os indicadores (% executado, paredes concluídas, fora do
   prazo, sem responsável), os chips de situação e o mosaico passam a
@@ -348,67 +349,90 @@ escolha é uma só para o sistema todo:
   paredes.
 - **Material:** a marcação (metro linear), a tabela de material e a
   planilha exportada somam só as paredes escolhidas. O número no chip
-  é o total de blocos.
+  é o total de blocos — ou de paredes, no semienterrado e na cobertura,
+  que não têm quantitativo de bloco publicado.
 
 Marcar no Mapa vale no Material e vice-versa, e a escolha atravessa a
-troca de pavimento: o 01A do 1º tipo e o do 4º tipo são o mesmo
-apartamento em andares diferentes. Nos pavimentos sem divisão
-(semienterrado, térreo, academia, cobertura) os chips não aparecem e
-nada é filtrado. As abas de pavimento, no alto, continuam mostrando o
-andar inteiro.
+troca de pavimento: o 01A do térreo, do 4º tipo e da cobertura são a
+mesma prumada. As abas de pavimento, no alto, continuam mostrando o
+andar inteiro. A **academia** (5 paredes) é outra prancha, sem os eixos
+do prédio, e fica sem divisão.
 
-A divisão veio do croqui do Roberto (12/11/2026), casado com a prancha
-de 1ª fiada do tipo pelos eixos Y3, Y2 e Y1 — a escala bateu nos dois
-intervalos. A planta pintada por apartamento, para conferir, está em
-`doc/apartamentos-tipo.png`. A atribuição de cada parede está em
-`assets/dados/alvenaria-apartamentos.json`: mudar uma parede de
-apartamento é editar uma linha ali.
+### De onde vem a divisão
 
-| Apartamento | Paredes | Blocos | Telas |
-|---|---|---|---|
-| 01A | 24 | 2.614 | 236 |
-| 02A | 14 | 1.720 | 171 |
-| 01B | 19 | 2.471 | 160 |
-| 02B | 14 | 1.724 | 171 |
-| 01C | 17 | 2.051 | 160 |
-| 02C | 16 | 2.264 | 236 |
-| **Pavimento** | **104** | **12.844** | **991** |
+Do croqui do Roberto (12/11/2026), casado com a prancha de 1ª fiada do
+tipo pelos eixos Y3, Y2 e Y1 — a escala bateu nos dois intervalos.
+Térreo, semienterrado e cobertura têm os **mesmos eixos, na mesma
+escala**; a prancha de cada um só está deslocada (−0,038, −0,016 e
+−0,019 da largura da prancha em relação ao tipo). As divisas são as
+mesmas, deslocadas junto. No semienterrado, que é garagem, a divisão
+funciona como zona: só os núcleos têm parede perto das divisas.
+
+A atribuição de cada parede está em
+`assets/dados/alvenaria-apartamentos.json`, um bloco por jogo de
+pranchas: mudar uma parede de apartamento é editar uma linha ali. As
+plantas pintadas por apartamento, para conferir, estão em `doc/`:
+`apartamentos-tipo.png`, `apartamentos-terreo.png`,
+`apartamentos-semienterrado.png` e `apartamentos-cobertura.png`.
+
+| Apartamento | Tipo (bl) | Térreo (bl) | Semienterrado (par) | Cobertura (par) |
+|---|---|---|---|---|
+| 01A | 2.614 | 2.955 | 18 | 25 |
+| 02A | 1.720 | 2.094 | 15 | 19 |
+| 01B | 2.471 | 2.731 | 10 | 22 |
+| 02B | 1.724 | 2.215 | 9 | 18 |
+| 01C | 2.051 | 2.142 | 13 | 18 |
+| 02C | 2.264 | 2.667 | 16 | 22 |
+| **Pavimento** | **12.844** | **14.804** | **81** | **124** |
 
 ### O que ficou na divisa
 
-O traço à mão não decide a parede que está em cima dele. Essas foram
-conferidas na prancha, uma a uma:
-
-- **Entre 02A e 01B a parede é dupla** (critério acústico): PR067/PR068
-  são a folha do 02A, PR069/PR070 a do 01B. O traço do croqui passava
-  um pouco à esquerda das duas folhas.
-- **Perto do eixo de cada núcleo**, PR023 é do 02 (o rótulo está do
-  lado do 01, a parede não); PR026, PR057 e PR058 são do 01. O mesmo
-  vale para as equivalentes dos blocos B e C.
-- **17 paredes estão em cima da divisa**: os eixos dos três núcleos
-  (PR001, PR029, PR045, PR059, PR060 no bloco A; PR002, PR030, PR046,
-  PR077, PR078 no B; PR003, PR031, PR050, PR093, PR094 no C) e a
-  parede única entre os blocos B e C (PR085, PR086). São 2.521 blocos
-  por pavimento.
+O traço à mão não decide a parede que está em cima dele. As paredes
+perto das divisas foram conferidas na prancha, pavimento por
+pavimento.
 
 **A parede de divisa fica com um apartamento só: o que vem antes na
 sequência 01A, 02A, 01B, 02B, 01C, 02C** — o da esquerda na planta,
 que é quem chega primeiro nela se a execução seguir essa ordem.
 Decisão do Roberto em 12/11/2026. Com isso os seis apartamentos somam
-exatamente o pavimento. No JSON, a lista `divisas` guarda os dois
-vizinhos de cada uma: trocar o lado de uma parede é mudar o
-apartamento dela em `paredes`.
+exatamente o pavimento. No JSON, a lista `divisas` de cada pavimento
+guarda os dois vizinhos de cada uma: trocar o lado de uma parede é
+mudar o apartamento dela em `paredes`.
 
-A tela avisa as duas pontas: ao escolher o 01A, "inclui 5 paredes de
-divisa que ficaram com esta seleção"; ao escolher o 02A, "não inclui
-5 paredes de divisa que ficaram com o vizinho". Escolhendo os dois
-juntos, não há aviso. A planilha lista para onde foi cada uma.
+- **Tipo.** Entre 02A e 01B a parede é **dupla** (critério acústico):
+  PR067/PR068 são a folha do 02A, PR069/PR070 a do 01B. Perto do eixo
+  de cada núcleo, PR023 é do 02 (o rótulo está do lado do 01, a parede
+  não); PR026, PR057 e PR058 são do 01 — e as equivalentes dos blocos
+  B e C. Em cima da divisa (17 paredes, 2.521 blocos): PR001, PR029,
+  PR045, PR059, PR060 (bloco A); PR002, PR030, PR046, PR077, PR078
+  (B); PR003, PR031, PR050, PR093, PR094 (C); PR085, PR086 (entre B
+  e C).
+- **Térreo.** O núcleo tem a escada no eixo. Em cima da divisa: PR001,
+  PR067, PR018 (A); PR002, PR089, PR019 (B); PR003, PR107, PR020 (C);
+  PR097, PR098, PR099 (parede única entre B e C). Parede dupla entre A
+  e B: PR075/076/077 do 02A, PR078/079/080 do 01B. Nenhum rótulo do
+  lado errado.
+- **Semienterrado.** Em cima da divisa: PR001, PR052 e a PR037 (longa,
+  atravessa o eixo) no A; PR002, PR063 no B; PR003, PR074 no C. A
+  PR039 tem o rótulo à esquerda da linha, mas a parede está à direita,
+  encostada no muro: é do 02C.
+- **Cobertura.** Em cima da divisa: PR001, PR035, PR051, PR063, PR064
+  (A); PR002, PR036, PR085, PR087 (B); PR003, PR037 (C); PR097, PR098,
+  PR099 e PR039, que cruza a parede única entre B e C. Do lado certo
+  por conferência: PR026 e PR066 são do 02A, PR027 do 02B, PR028 do
+  02C (a parede está à direita do eixo; o rótulo, à esquerda). A
+  PR062/PR065, no eixo embaixo, é parede dupla: PR062 do 01A, PR065
+  do 02A.
 
-Na planilha, cada aba de pavimento tipo ganha a tabela **saldo por
-apartamento** (o que ainda falta subir), com uma coluna por
-apartamento e, na última, o pavimento ou o conjunto escolhido — as colunas somam o total.
+A tela avisa as duas pontas: ao escolher o 01A do tipo, "inclui 5
+paredes de divisa que ficaram com esta seleção"; ao escolher o 02A,
+"não inclui 5 paredes de divisa que ficaram com o vizinho". Escolhendo
+os dois juntos, não há aviso. A planilha lista para onde foi cada uma.
 
-O **térreo** não tem divisão em apartamentos: o croqui é do tipo.
+Na planilha, cada aba de pavimento com quantitativo de bloco (térreo e
+tipos) ganha a tabela **saldo por apartamento** (o que ainda falta
+subir), com uma coluna por apartamento e, na última, o pavimento ou o
+conjunto escolhido — as colunas somam o total.
 
 ---
 
