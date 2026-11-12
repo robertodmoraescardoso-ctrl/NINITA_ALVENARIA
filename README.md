@@ -336,13 +336,26 @@ primeiro clique. Sem internet, o botão avisa e não faz nada.
 
 ## Material por apartamento
 
-No pavimento tipo, a aba **Material** mostra chips com os seis
-apartamentos — **01A, 02A, 01B, 02B, 01C, 02C** — e o total de blocos
-de cada um. Dá para marcar **um ou vários**: a marcação (metro
-linear), a tabela de material e a planilha exportada passam a somar
-só as paredes deles. **Pavimento inteiro** volta ao total. A escolha
-atravessa a troca de pavimento: o 01A do 1º tipo e o do 4º tipo são o
-mesmo apartamento em andares diferentes.
+No pavimento tipo, a aba **Material** e a aba **Mapa** mostram chips
+com os seis apartamentos — **01A, 02A, 01B, 02B, 01C, 02C**. Dá para
+marcar **um ou vários**; **Pavimento inteiro** volta ao total. A
+escolha é uma só para o sistema todo:
+
+- **Mapa:** os indicadores (% executado, paredes concluídas, fora do
+  prazo, sem responsável), os chips de situação e o mosaico passam a
+  contar só as paredes escolhidas; na planta, os pinos dos outros
+  apartamentos ficam apagados. O número no chip é a quantidade de
+  paredes.
+- **Material:** a marcação (metro linear), a tabela de material e a
+  planilha exportada somam só as paredes escolhidas. O número no chip
+  é o total de blocos.
+
+Marcar no Mapa vale no Material e vice-versa, e a escolha atravessa a
+troca de pavimento: o 01A do 1º tipo e o do 4º tipo são o mesmo
+apartamento em andares diferentes. Nos pavimentos sem divisão
+(semienterrado, térreo, academia, cobertura) os chips não aparecem e
+nada é filtrado. As abas de pavimento, no alto, continuam mostrando o
+andar inteiro.
 
 A divisão veio do croqui do Roberto (12/11/2026), casado com a prancha
 de 1ª fiada do tipo pelos eixos Y3, Y2 e Y1 — a escala bateu nos dois
