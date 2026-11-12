@@ -12,6 +12,7 @@ import { CHAVE_SB, URL_SB, apagarEquipe, apagarPerfil, cfgLocal, conectar, entra
 import { definirPeriodo, desenharEquipes, desenharFiltros, desenharIndicadores, desenharMaterial,
          desenharPavimentos, desenharPerfis, desenharPrazos, desenharProducao } from "./paineis.js";
 import { alternarInversao, aplicarZoom, desenharMosaico, desenharPlanta, irAtePeca, mudarZoom, pintarPinos } from "./vistas.js";
+import { exportarMaterial } from "./exportar.js";
 
 /* ------------------------------------------------------------
    ALVENARIA DE VEDAÇÃO — ponto de partida
@@ -191,7 +192,7 @@ document.addEventListener("click", function(ev){
     "[data-pav],[data-aba],[data-vista],[data-zoom],[data-inverter],[data-filtro],[data-peca]," +
     "[data-pct],[data-lpct],[data-eqdel],[data-perfdel],[data-apdel],[data-selecionar],[data-periodo],[data-servico]," +
     "#alvFechar,#alvRegistrar,#alvSalvarPlano,#btnEntrar,#btnSalvarCfg,#alvSair,#alvCortina," +
-    "#alvEqAdd,#alvPerfAdd," +
+    "#alvEqAdd,#alvPerfAdd,#alvExpPav,#alvExpPredio," +
     "#alvLoteMaterial,#alvLotePlanejar,#alvLoteApontar,#alvLoteLimpar,#alvLoteRegistrar,#alvLoteSalvarPlano");
   if(!alvo) return;
 
@@ -201,6 +202,10 @@ document.addEventListener("click", function(ev){
     return;
   }
   if(alvo.dataset.apdel){ excluirApontamento(alvo); return; }
+  if(alvo.id === "alvExpPav" || alvo.id === "alvExpPredio"){
+    exportarMaterial(alvo.id === "alvExpPredio" ? "predio" : "pavimento", alvo);
+    return;
+  }
   if(alvo.id === "alvEqAdd"){ adicionarEquipe(alvo); return; }
   if(alvo.dataset.eqdel){ removerEquipe(alvo.dataset.eqdel); return; }
   if(alvo.id === "alvPerfAdd"){ adicionarPerfil(alvo); return; }

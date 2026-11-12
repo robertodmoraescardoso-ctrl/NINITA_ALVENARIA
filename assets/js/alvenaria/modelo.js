@@ -272,6 +272,31 @@ export function materialDe(paredes){
   return { previsto: previsto, restante: restante, area: area, semQuant: semQuant };
 }
 
+/* Quantitativo de material de um pavimento: o que a aba Material
+   mostra e o que a planilha exporta saem desta mesma conta, para
+   as duas nunca discordarem. Previsto é o de projeto; assentado é
+   estimado (previsto × % de levante apontado em cada parede). */
+export function quantitativoMaterial(pav){
+  const todas = est.porPavimento[pav] || [];
+  const lista = todas.filter(function(w){ return w.sku; });
+  const previsto = {}, assentado = {};
+  for(const w of lista){
+    const f = percentual(w, "elevacao") / 100;
+    for(const k in w.sku){
+      previsto[k] = (previsto[k] || 0) + w.sku[k];
+      assentado[k] = (assentado[k] || 0) + w.sku[k] * f;
+    }
+  }
+  const ordem = Object.keys(previsto).map(Number).sort(function(a,b){ return a-b; });
+  const ehBloco = function(i){ return String(est.skus[i]).indexOf("TELA") !== 0; };
+  return {
+    pav: pav, nome: (est.pavPorCodigo[pav] || {}).n || pav, pecas: lista.length,
+    ordem: ordem, previsto: previsto, assentado: assentado,
+    blocos: ordem.filter(ehBloco), telas: ordem.filter(function(i){ return !ehBloco(i); }),
+    linear: linearDe(todas)
+  };
+}
+
 /* ------------------------------------------------------------
    Produção por equipe num período
 

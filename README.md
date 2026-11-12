@@ -43,6 +43,7 @@ assets/
     ficha.js            ficha da parede e lançamento
     lote.js             seleção múltipla: material, apontar, planejar
     paineis.js          indicadores, prazos, equipes e material
+    exportar.js         planilha Excel do quantitativo de material
 migracoes/              scripts SQL do banco, numerados (rodar em ordem)
 ```
 
@@ -301,6 +302,34 @@ para comparar equipes e projetar prazo, não como medição de folha.
 O **período** filtra pela data de referência. Um trecho que começou
 antes do período entra inteiro se terminou dentro dele: o avanço é
 creditado na medição, não rateado dia a dia.
+
+---
+
+## Exportar o material em planilha
+
+Na aba **Material**, dois botões geram um arquivo Excel (`.xlsx`):
+
+- **Exportar &lt;pavimento&gt;** — a mesma tabela da tela, para o
+  pavimento aberto: SKU, previsto, estimado assentado e saldo, os
+  totais de blocos e telas e o metro linear da marcação.
+  Arquivo `Material_Alvenaria_TP01_2026-11-12.xlsx`.
+- **Exportar prédio inteiro** — uma aba *Resumo* com cada SKU numa
+  linha e um pavimento por coluna, mais previsto total, assentado e
+  saldo; o metro linear de todos os pavimentos; e depois uma aba por
+  pavimento, igual à exportação individual.
+  Arquivo `Material_Alvenaria_Predio_2026-11-12.xlsx`.
+
+Os números da tela e da planilha saem da mesma função
+(`quantitativoMaterial`, em `modelo.js`): as duas não têm como
+discordar. Os valores vão como **número**, não texto — dá para somar,
+filtrar e montar tabela dinâmica direto no Excel.
+
+O assentado continua sendo estimado (previsto × % de levante
+apontado); a nota vai no rodapé de cada aba. Semienterrado, Academia
+e Cobertura aparecem sem material porque não têm elevação publicada.
+
+O gerador de planilha (SheetJS 0.18.5, via cdnjs) só é baixado no
+primeiro clique. Sem internet, o botão avisa e não faz nada.
 
 ---
 

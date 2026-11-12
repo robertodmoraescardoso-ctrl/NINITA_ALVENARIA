@@ -267,6 +267,9 @@
 .alv-salvar.secundario{background:var(--fundo-3);color:var(--texto);border:1px solid var(--borda)}
 .alv-msg{font-size:12.5px;color:var(--texto-3);margin-top:8px}
 .alv-msg.erro{color:var(--st-atraso);font-weight:600}
+/* exportar planilha: dois botões e o aviso na mesma linha, quebrando no celular */
+.alv-exportar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:16px 0 4px}
+.alv-exportar .alv-msg{margin-top:0}
 
 .alv-hist{display:flex;flex-direction:column}
 .alv-hist__l{display:flex;gap:9px;align-items:baseline;padding:7px 0;border-top:1px dotted var(--borda);font-size:13px}

@@ -1,6 +1,6 @@
 import { $, esc } from "../ui.js";
 import { lerApontamentos } from "./nuvem.js";
-import { SERVICOS, composicao, dataCurta, est, executado, hojeISO, linearDe, m2Executado, meuNome, nf, ni, nomeServico, percentual, pessoasDaEquipe, previsto, producaoPorEquipe, ROTULO, status, temArea, temPrevisto, unidade, visiveis } from "./modelo.js";
+import { SERVICOS, composicao, dataCurta, est, executado, hojeISO, linearDe, m2Executado, meuNome, nf, ni, nomeServico, percentual, pessoasDaEquipe, previsto, producaoPorEquipe, quantitativoMaterial, ROTULO, status, temArea, temPrevisto, unidade, visiveis } from "./modelo.js";
 
 /* ------------------------------------------------------------
    PAINÉIS — indicadores, filtros, prazos, equipes e material
@@ -350,23 +350,21 @@ function carteiraPorResponsavel(){
 
 /* ---------- material ---------- */
 export function desenharMaterial(){
-  const lista = (est.porPavimento[est.pav] || []).filter(function(w){ return w.sku; });
   const alvo = $("#alvMaterial");
+  const q = quantitativoMaterial(est.pav);
+  const lin = q.linear;
 
-  const previsto = {}, assentado = {};
-  lista.forEach(function(w){
-    /* o bloco sobe a parede: o que conta aqui é o levante */
-    const f = percentual(w, "elevacao")/100;
-    for(const k in w.sku){
-      previsto[k] = (previsto[k] || 0) + w.sku[k];
-      assentado[k] = (assentado[k] || 0) + w.sku[k]*f;
-    }
-  });
+  const exportar =
+    '<div class="alv-exportar">' +
+      '<button type="button" class="btn btn--p" id="alvExpPav">Exportar ' + esc(q.nome) + " (.xlsx)</button>" +
+      '<button type="button" class="btn btn--p" id="alvExpPredio">Exportar prédio inteiro (.xlsx)</button>' +
+      '<span class="alv-msg" id="alvExpMsg" role="status"></span>' +
+    "</div>";
+
   /* marcação se mede em metro linear, não em bloco: o resumo do
      comprimento vem antes da tabela de material */
-  const lin = linearDe(est.porPavimento[est.pav] || []);
   const blocoLinear =
-    '<h2 class="alv-titulo">Marcação · ' + esc(est.pavPorCodigo[est.pav].n) + "</h2>" +
+    '<h2 class="alv-titulo">Marcação · ' + esc(q.nome) + "</h2>" +
     (lin.total > 0
       ? '<div class="indicadores" style="margin-bottom:8px">' +
           ind(nf(lin.total,1) + " m", "Metro linear previsto", "soma das paredes levantadas") +
@@ -378,30 +376,27 @@ export function desenharMaterial(){
         "(o semienterrado e a academia não constam dela) ficam fora desta conta.</div>"
       : "");
 
-  if(!lista.length){
-    alvo.innerHTML = blocoLinear +
+  if(!q.pecas){
+    alvo.innerHTML = exportar + blocoLinear +
       '<h2 class="alv-titulo">Levante · material</h2>' +
       '<div class="vazio">Este pavimento não tem quantitativo publicado: ' +
       "sem elevação no ConstruCode, não há tabela de material.</div>";
     return;
   }
 
-  const ordem = Object.keys(previsto).map(Number).sort(function(a,b){ return a-b; });
-  const ehBloco = function(i){ return String(est.skus[i]).indexOf("TELA") !== 0; };
   const soma = function(arr, obj){ return arr.reduce(function(s,i){ return s + (obj[i] || 0); }, 0); };
-  const blocos = ordem.filter(ehBloco), telas = ordem.filter(function(i){ return !ehBloco(i); });
 
-  alvo.innerHTML = blocoLinear +
-    '<h2 class="alv-titulo">Levante · material · ' + esc(est.pavPorCodigo[est.pav].n) + "</h2>" +
+  alvo.innerHTML = exportar + blocoLinear +
+    '<h2 class="alv-titulo">Levante · material · ' + esc(q.nome) + "</h2>" +
     '<div class="alv-tabela-rolante"><table class="alv-tabela">' +
       "<thead><tr><th>SKU</th><th>Previsto (un)</th><th>Estimado assentado</th><th>Saldo</th></tr></thead><tbody>" +
-      ordem.map(function(i){
-        const p = previsto[i], a = Math.round(assentado[i]);
+      q.ordem.map(function(i){
+        const p = q.previsto[i], a = Math.round(q.assentado[i]);
         return "<tr><td>" + esc(est.skus[i]) + "</td><td>" + ni(p) + "</td><td>" + ni(a) + "</td><td>" + ni(p-a) + "</td></tr>";
       }).join("") +
       "</tbody><tfoot>" +
-      linhaTotal("Blocos", soma(blocos, previsto), Math.round(soma(blocos, assentado))) +
-      linhaTotal("Telas", soma(telas, previsto), Math.round(soma(telas, assentado))) +
+      linhaTotal("Blocos", soma(q.blocos, q.previsto), Math.round(soma(q.blocos, q.assentado))) +
+      linhaTotal("Telas", soma(q.telas, q.previsto), Math.round(soma(q.telas, q.assentado))) +
       "</tfoot></table></div>" +
     '<div class="alv-msg">O assentado é estimado: quantidade de projeto × % apontado da parede. ' +
       "Nenhuma contagem de bloco é feita no apontamento. XVAR é bloco cortado, sem dimensão em projeto. " +
