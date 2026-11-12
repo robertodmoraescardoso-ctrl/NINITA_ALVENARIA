@@ -393,7 +393,7 @@ juntos, não há aviso. A planilha lista para onde foi cada uma.
 
 Na planilha, cada aba de pavimento tipo ganha a tabela **saldo por
 apartamento** (o que ainda falta subir), com uma coluna por
-apartamento e, na última, o pavimento ou o conjunto escolhido.
+apartamento e, na última, o pavimento ou o conjunto escolhido — as colunas somam o total.
 
 O **térreo** não tem divisão em apartamentos: o croqui é do tipo.
 
