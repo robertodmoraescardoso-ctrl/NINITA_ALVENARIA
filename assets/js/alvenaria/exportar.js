@@ -52,6 +52,7 @@ const NOTA = "O assentado é estimado: quantidade de projeto × % de levante apo
 
 function dataBR(iso){ return iso.slice(8,10) + "/" + iso.slice(5,7) + "/" + iso.slice(0,4); }
 function m1(v){ return Math.round(v * 10) / 10; }
+function m2(v){ return Math.round(v * 100) / 100; }
 function soma(ids, obj){ return ids.reduce(function(s,i){ return s + (obj[i] || 0); }, 0); }
 
 function cabecalho(titulo){
@@ -66,6 +67,16 @@ function cabecalho(titulo){
 /* uma aba por pavimento: material do levante e metro linear da marcação */
 function linhasPavimento(q){
   const L = cabecalho("Material · " + q.nome + (q.aptos.length ? " · " + q.aptos.join(" + ") : ""));
+  L.push(["LEVANTE · ÁREA (m²)"]);
+  if(q.area.total > 0){
+    L.push(["Previsto (m²)", m2(q.area.total)]);
+    L.push(["Executado (m²)", m2(q.area.total - q.area.falta)]);
+    L.push(["Falta levantar (m²)", m2(q.area.falta)]);
+  } else {
+    L.push(["Sem área de projeto: pavimento sem elevação publicada no ConstruCode."]);
+  }
+  if(q.area.total > 0 && q.area.sem) L.push(["Peças sem área (fora da conta)", q.area.sem]);
+  L.push([]);
   L.push(["LEVANTE · MATERIAL"]);
   if(q.ordem.length){
     L.push(["SKU", "Previsto (un)", "Estimado assentado (un)", "Saldo (un)"]);
@@ -85,6 +96,7 @@ function linhasPavimento(q){
   L.push(["MARCAÇÃO · METRO LINEAR"]);
   if(q.linear.total > 0){
     L.push(["Previsto (m)", m1(q.linear.total)]);
+    L.push(["Executado (m)", m1(q.linear.total - q.linear.falta)]);
     L.push(["Falta marcar (m)", m1(q.linear.falta)]);
   } else {
     L.push(["Nenhuma peça deste pavimento tem comprimento levantado."]);
@@ -159,6 +171,16 @@ function linhasResumo(qs){
   }
 
   L.push([]);
+  L.push(["LEVANTE · ÁREA (m²)"]);
+  L.push(["Pavimento", "Previsto (m²)", "Executado (m²)", "Falta levantar (m²)"]);
+  let aT = 0, aF = 0;
+  qs.forEach(function(q){
+    aT += q.area.total; aF += q.area.falta;
+    L.push([q.nome, m2(q.area.total), m2(q.area.total - q.area.falta), m2(q.area.falta)]);
+  });
+  L.push(["Total", m2(aT), m2(aT - aF), m2(aF)]);
+
+  L.push([]);
   L.push(["MARCAÇÃO · METRO LINEAR"]);
   L.push(["Pavimento", "Previsto (m)", "Falta marcar (m)", "Peças sem comprimento"]);
   let tot = 0, falta = 0, sem = 0;
@@ -181,7 +203,7 @@ function folha(XLSX, linhas, larguras){
   for(const ref in ws){
     if(ref[0] === "!") continue;
     const c = ws[ref];
-    if(c.t === "n") c.z = Number.isInteger(c.v) ? "#,##0" : "#,##0.0";
+    if(c.t === "n") c.z = Number.isInteger(c.v) ? "#,##0" : (Math.round(c.v * 10) === c.v * 10 ? "#,##0.0" : "#,##0.00");
   }
   ws["!cols"] = larguras.map(function(w){ return { wch: w }; });
   return ws;

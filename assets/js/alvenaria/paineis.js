@@ -1,6 +1,6 @@
 import { $, esc } from "../ui.js";
 import { lerApontamentos } from "./nuvem.js";
-import { SERVICOS, apartamentosDe, aptosAtivos, composicao, dataCurta, est, executado, hojeISO, linearDe, m2Executado, meuNome, nf, ni, nomeServico, percentual, pessoasDaEquipe, paredesDosAptos, paredesEmFoco, previsto, producaoPorEquipe, quantitativoMaterial, ROTULO, status, temArea, temPrevisto, unidade, visiveis } from "./modelo.js";
+import { SERVICOS, apartamentosDe, aptosAtivos, composicao, dataCurta, est, executado, hojeISO, linearDe, m2Executado, meuNome, nf, ni, nomeServico, percentual, pessoasDaEquipe, paredesDosAptos, paredesEmFoco, previsto, producaoPorEquipe, quantitativoMaterial, ROTULO, servicoAtual, status, temArea, temPrevisto, unidade, visiveis } from "./modelo.js";
 
 /* ------------------------------------------------------------
    PAINÉIS — indicadores, filtros, prazos, equipes e material
@@ -414,11 +414,36 @@ function avisoDivisas(q){
       : "");
 }
 
+function resumoServico(q, nome){
+  const levante = servicoAtual() === "elevacao";
+  const r = levante ? q.area : q.linear;
+  const un = levante ? " m²" : " m";
+  const titulo = '<h2 class="alv-titulo">' + (levante ? "Levante" : "Marcação") + " · " + nome + "</h2>";
+  if(!(r.total > 0)){
+    return titulo + '<div class="vazio">' + (levante
+      ? "Nenhuma peça desta seleção tem área de projeto: sem elevação publicada no ConstruCode, não há m² para medir."
+      : "Nenhuma peça desta seleção tem comprimento levantado.") + "</div>";
+  }
+  return titulo +
+    '<div class="indicadores" style="margin-bottom:8px">' +
+      ind(nf(r.total, levante ? 2 : 1) + un, levante ? "Área prevista" : "Metro linear previsto",
+          levante ? "soma das paredes com quantitativo" : "soma das paredes levantadas") +
+      ind(nf(r.total - r.falta, levante ? 2 : 1) + un, levante ? "Levante executado" : "Marcação executada",
+          nf(r.total > 0 ? (r.total - r.falta) / r.total * 100 : 0, 1) + "% do previsto") +
+      ind(nf(r.falta, levante ? 2 : 1) + un, levante ? "Falta levantar" : "Falta marcar", "desconta o que já foi apontado") +
+    "</div>" +
+    (r.sem
+      ? '<div class="alv-msg">' + r.sem + " peça(s) sem " +
+        (levante ? "área de projeto (pavimento sem elevação publicada)"
+                 : "comprimento na planilha de cotação (o semienterrado e a academia não constam dela)") +
+        " ficam fora desta conta.</div>"
+      : "");
+}
+
 export function desenharMaterial(){
   const alvo = $("#alvMaterial");
   const sel = aptosAtivos(est.pav);
   const q = quantitativoMaterial(est.pav, sel);
-  const lin = q.linear;
   const nome = esc(q.nome) + (sel.length ? " · " + esc(sel.join(" + ")) : "");
 
   const exportar =
@@ -430,20 +455,9 @@ export function desenharMaterial(){
 
   const topo = exportar + seletorApartamentos(apartamentosDe(est.pav), sel);
 
-  /* marcação se mede em metro linear, não em bloco: o resumo do
-     comprimento vem antes da tabela de material */
-  const blocoLinear =
-    '<h2 class="alv-titulo">Marcação · ' + nome + "</h2>" +
-    (lin.total > 0
-      ? '<div class="indicadores" style="margin-bottom:8px">' +
-          ind(nf(lin.total,1) + " m", "Metro linear previsto", "soma das paredes levantadas") +
-          ind(nf(lin.falta,1) + " m", "Falta marcar", "desconta o que já foi apontado") +
-        "</div>"
-      : '<div class="vazio">Nenhuma peça deste pavimento tem comprimento levantado.</div>') +
-    (lin.sem
-      ? '<div class="alv-msg">' + lin.sem + " peça(s) sem comprimento na planilha de cotação " +
-        "(o semienterrado e a academia não constam dela) ficam fora desta conta.</div>"
-      : "");
+  /* o resumo segue o serviço escolhido no alto: levante em m²,
+     marcação em metro linear. A tabela de blocos é sempre do levante. */
+  const blocoLinear = resumoServico(q, nome);
 
   if(!q.pecas){
     alvo.innerHTML = topo + blocoLinear +

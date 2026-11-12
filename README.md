@@ -308,16 +308,26 @@ creditado na medição, não rateado dia a dia.
 
 ## Exportar o material em planilha
 
-Na aba **Material**, dois botões geram um arquivo Excel (`.xlsx`):
+No alto da aba **Material**, o resumo segue o serviço escolhido na
+barra de cima: com **Levante**, área prevista, executada e falta
+levantar, em m²; com **Marcação**, os mesmos três números em metro
+linear. A tabela de blocos é sempre do levante — bloco é o que sobe a
+parede. Pavimento sem elevação publicada (semienterrado, academia,
+cobertura) não tem m²: o Levante avisa e a Marcação mostra o metro
+linear que existir.
 
-- **Exportar &lt;pavimento&gt;** — a mesma tabela da tela, para o
-  pavimento aberto: SKU, previsto, estimado assentado e saldo, os
-  totais de blocos e telas e o metro linear da marcação.
+Dois botões geram um arquivo Excel (`.xlsx`):
+
+- **Exportar &lt;pavimento&gt;** — para o pavimento aberto: a área do
+  levante (previsto, executado, falta, em m²), a tabela de blocos
+  (SKU, previsto, estimado assentado e saldo, totais de blocos e
+  telas) e o metro linear da marcação (previsto, executado, falta).
+  Os dois serviços vão sempre, qualquer que seja o escolhido na tela.
   Arquivo `Material_Alvenaria_TP01_2026-11-12.xlsx`.
 - **Exportar prédio inteiro** — uma aba *Resumo* com cada SKU numa
   linha e um pavimento por coluna, mais previsto total, assentado e
-  saldo; o metro linear de todos os pavimentos; e depois uma aba por
-  pavimento, igual à exportação individual.
+  saldo; a área do levante e o metro linear de todos os pavimentos; e
+  depois uma aba por pavimento, igual à exportação individual.
   Arquivo `Material_Alvenaria_Predio_2026-11-12.xlsx`.
 
 Os números da tela e da planilha saem da mesma função
@@ -347,8 +357,9 @@ para o sistema todo:
   contar só as paredes escolhidas; na planta, os pinos dos outros
   apartamentos ficam apagados. O número no chip é a quantidade de
   paredes.
-- **Material:** a marcação (metro linear), a tabela de material e a
-  planilha exportada somam só as paredes escolhidas. O número no chip
+- **Material:** o resumo do serviço (m² no levante, metro linear na
+  marcação), a tabela de material e a planilha exportada somam só as
+  paredes escolhidas. O número no chip
   é o total de blocos — ou de paredes, no semienterrado e na cobertura,
   que não têm quantitativo de bloco publicado.
 

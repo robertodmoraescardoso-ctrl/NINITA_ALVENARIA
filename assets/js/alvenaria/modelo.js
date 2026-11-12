@@ -282,6 +282,17 @@ export function linearDe(paredes){
   return { total: total, falta: falta, sem: sem };
 }
 
+/* área do levante da seleção, em m²: o par do linearDe */
+export function areaDe(paredes){
+  let total = 0, falta = 0, sem = 0;
+  for(const w of paredes){
+    if(!temArea(w)){ sem++; continue; }
+    total += w.area;
+    falta += w.area * Math.max(0, 100 - percentual(w, "elevacao")) / 100;
+  }
+  return { total: total, falta: falta, sem: sem };
+}
+
 export function materialDe(paredes){
   const previsto = {}, restante = {};
   let area = 0, semQuant = 0;
@@ -372,7 +383,8 @@ export function quantitativoMaterial(pav, sel){
     aptos: sel.slice(), divisas: divisasDaSelecao(pav, sel),
     ordem: ordem, previsto: previsto, assentado: assentado,
     blocos: ordem.filter(ehBloco), telas: ordem.filter(function(i){ return !ehBloco(i); }),
-    linear: linearDe(todas)
+    linear: linearDe(todas),
+    area: areaDe(todas)
   };
 }
 
