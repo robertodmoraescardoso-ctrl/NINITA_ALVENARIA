@@ -15,6 +15,8 @@ export const est = {
   /* divisão em apartamentos, por jogo de pranchas (só o tipo, por
      enquanto): { TP: { apartamentos:[...], paredes:{PRxxx:[...]} } } */
   aptos: {},
+  /* blocos por pallet, por nome de SKU (assets/dados/alvenaria-pallets.json) */
+  pallets: {},
   /* o que veio do banco */
   situacao: {},      /* "PAV__PRxxx" -> último apontamento */
   plano: {},         /* "PAV__PRxxx" -> {id, responsavel, inicio, fim} */
@@ -66,7 +68,7 @@ export function unidade(s){ return SERVICOS[s || servicoAtual()].unidade; }
 export function nomeServico(s){ return SERVICOS[s || servicoAtual()].nome; }
 
 export async function carregarCatalogo(){
-  const [cat, pl, ap] = await Promise.all([
+  const [cat, pl, ap, pal] = await Promise.all([
     fetch("assets/dados/alvenaria-catalogo.json").then(function(r){
       if(!r.ok) throw new Error("catálogo (HTTP " + r.status + ")"); return r.json(); }),
     fetch("assets/dados/alvenaria-plantas.json").then(function(r){
@@ -75,6 +77,10 @@ export async function carregarCatalogo(){
        só não oferece a separação */
     fetch("assets/dados/alvenaria-apartamentos.json")
       .then(function(r){ return r.ok ? r.json() : null; })
+      .catch(function(){ return null; }),
+    /* também opcional: sem ele a coluna de pallets some */
+    fetch("assets/dados/alvenaria-pallets.json")
+      .then(function(r){ return r.ok ? r.json() : null; })
       .catch(function(){ return null; })
   ]);
 
@@ -82,6 +88,7 @@ export async function carregarCatalogo(){
   est.pavimentos = cat.pavimentos;
   est.plantas = pl;
   est.aptos = (ap && ap.jogos) || {};
+  est.pallets = (pal && pal.porPallet) || {};
   est.paredes = [];
   est.porId = {};
   est.porPavimento = {};
@@ -359,6 +366,35 @@ export function divisasDaSelecao(pav, sel){
   }
   return r;
 }
+
+/* ------------------------------------------------------------
+   Pallets
+
+   Blocos ÷ blocos por pallet, SEMPRE arredondado para cima, e
+   SKU a SKU: um pallet não mistura SKU, então o total de pallets
+   é a soma dos pallets de cada SKU, não o total de blocos dividido.
+   null = esse SKU não tem número de pallet (família 19, XVAR, tela).
+   ------------------------------------------------------------ */
+export function porPallet(i){
+  const n = est.pallets[est.skus[i]];
+  return typeof n === "number" && n > 0 ? n : null;
+}
+export function palletsDe(qtd, i){
+  const n = porPallet(i);
+  if(n === null) return null;
+  return qtd > 0 ? Math.ceil(qtd / n) : 0;
+}
+/* total de pallets de vários SKUs; semDado = SKUs com quantidade
+   mas sem número de pallet */
+export function somaPallets(ids, qtdDe){
+  let total = 0; const semDado = [];
+  ids.forEach(function(i){
+    const q = qtdDe(i), p = palletsDe(q, i);
+    if(p === null){ if(q > 0) semDado.push(i); } else total += p;
+  });
+  return { total: total, semDado: semDado };
+}
+export function temPallets(){ return Object.keys(est.pallets).length > 0; }
 
 /* Quantitativo de material de um pavimento: o que a aba Material
    mostra e o que a planilha exporta saem desta mesma conta, para

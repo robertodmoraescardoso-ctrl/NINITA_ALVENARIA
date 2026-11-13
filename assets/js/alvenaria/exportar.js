@@ -1,5 +1,5 @@
 import { $ } from "../ui.js";
-import { apartamentosDe, aptosAtivos, est, hojeISO, quantitativoMaterial } from "./modelo.js";
+import { apartamentosDe, aptosAtivos, est, hojeISO, palletsDe, quantitativoMaterial, somaPallets, temPallets } from "./modelo.js";
 
 /* ------------------------------------------------------------
    EXPORTAR — quantitativo de material em planilha Excel (.xlsx)
@@ -46,6 +46,9 @@ function carregarXlsx(){
   return carregando;
 }
 
+const NOTA_PALLET = "Pallets: blocos ÷ blocos por pallet (lista do almoxarifado, 13/11/2026), arredondado para cima, " +
+  "SKU a SKU — um pallet não mistura SKU. — = sem número de pallet (família 19 e bloco cortado XVAR). Tela não vai em pallet.";
+
 const NOTA = "O assentado é estimado: quantidade de projeto × % de levante apontado em cada parede. " +
   "Nenhuma contagem de bloco é feita no apontamento. XVAR é bloco cortado, sem dimensão em projeto. " +
   "O bloco calha (CER-CAL) entra como alvenaria; isole-o para separar verga.";
@@ -79,15 +82,19 @@ function linhasPavimento(q){
   L.push([]);
   L.push(["LEVANTE · MATERIAL"]);
   if(q.ordem.length){
-    L.push(["SKU", "Previsto (un)", "Estimado assentado (un)", "Saldo (un)"]);
+    const comPallet = temPallets();
+    const saldoDe = function(i){ return (q.previsto[i] || 0) - Math.round(q.assentado[i] || 0); };
+    const pal = function(i){ const p = palletsDe(saldoDe(i), i); return p === null ? "—" : p; };
+    L.push(["SKU", "Previsto (un)", "Estimado assentado (un)", "Saldo (un)"].concat(comPallet ? ["Pallets a subir"] : []));
     for(const i of q.ordem){
       const p = q.previsto[i], a = Math.round(q.assentado[i]);
-      L.push([est.skus[i], p, a, p - a]);
+      L.push([est.skus[i], p, a, p - a].concat(comPallet ? [pal(i)] : []));
     }
-    [["Total blocos", q.blocos], ["Total telas", q.telas]].forEach(function(t){
+    [["Total blocos", q.blocos], ["Total telas", q.telas]].forEach(function(t, k){
       const p = soma(t[1], q.previsto), a = Math.round(soma(t[1], q.assentado));
-      L.push([t[0], p, a, p - a]);
+      L.push([t[0], p, a, p - a].concat(comPallet ? [k === 0 ? somaPallets(q.blocos, saldoDe).total : "—"] : []));
     });
+    if(comPallet) L.push([NOTA_PALLET]);
   } else {
     L.push(["Sem quantitativo publicado: este pavimento não tem elevação no ConstruCode."]);
   }
@@ -128,6 +135,20 @@ function linhasPorApartamento(q){
   L.push(["Total blocos"].concat(qs.map(function(qa){ return saldoTot(qa, q.blocos); }), [saldoTot(q, q.blocos)]));
   L.push(["Total telas"].concat(qs.map(function(qa){ return saldoTot(qa, q.telas); }), [saldoTot(q, q.telas)]));
 
+  if(temPallets()){
+    const pal = function(qa, i){ const p = palletsDe(saldo(qa, i), i); return p === null ? "—" : p; };
+    const palTot = function(qa){ return somaPallets(q.blocos, function(i){ return saldo(qa, i); }).total; };
+    L.push([]);
+    L.push(["PALLETS POR APARTAMENTO · o que falta subir, arredondado para cima"]);
+    L.push(["SKU"].concat(cols, [q.aptos.length ? "Conjunto" : "Pavimento"]));
+    q.blocos.forEach(function(i){
+      L.push([est.skus[i]].concat(qs.map(function(qa){ return pal(qa, i); }), [pal(q, i)]));
+    });
+    L.push(["Total pallets"].concat(qs.map(palTot), [palTot(q)]));
+    L.push(["Cada apartamento arredonda o seu pallet para cima; por isso a soma das colunas pode passar " +
+            "do total, que arredonda uma vez só. Subindo um apartamento por vez, vale a coluna dele."]);
+  }
+
   const divisas = (est.porPavimento[q.pav] || []).filter(function(w){
     return w.divisa && w.divisa.some(function(a){ return cols.indexOf(a) !== -1; });
   });
@@ -164,6 +185,23 @@ function linhasResumo(qs){
   linha("Total blocos", ordem.filter(ehBloco));
   linha("Total telas", ordem.filter(function(i){ return !ehBloco(i); }));
 
+  if(temPallets()){
+    const blocosIds = ordem.filter(ehBloco);
+    const saldoPav = function(q, i){ return (q.previsto[i] || 0) - Math.round(q.assentado[i] || 0); };
+    const pal = function(q, i){ const p = palletsDe(saldoPav(q, i), i); return p === null ? "—" : p; };
+    L.push([]);
+    L.push(["PALLETS A SUBIR POR PAVIMENTO · arredondado para cima, SKU a SKU"]);
+    L.push(["SKU"].concat(comMat.map(function(q){ return q.nome; }), ["Total"]));
+    blocosIds.forEach(function(i){
+      const v = comMat.map(function(q){ return pal(q, i); });
+      const semDado = v.some(function(x){ return x === "—"; }) && v.every(function(x){ return x === "—" || x === 0; });
+      L.push([est.skus[i]].concat(v, [semDado ? "—" : v.reduce(function(s, x){ return s + (x === "—" ? 0 : x); }, 0)]));
+    });
+    const tot = comMat.map(function(q){ return somaPallets(blocosIds, function(i){ return saldoPav(q, i); }).total; });
+    L.push(["Total pallets"].concat(tot, [tot.reduce(function(s, v){ return s + v; }, 0)]));
+    L.push([NOTA_PALLET]);
+  }
+
   if(semMat.length){
     L.push([]);
     L.push(["Sem quantitativo de material (sem elevação no ConstruCode): " +
@@ -194,7 +232,7 @@ function linhasResumo(qs){
   return L;
 }
 
-const LARG_PAV = [34, 14, 24, 12, 12, 12, 12, 26];
+const LARG_PAV = [34, 14, 24, 12, 16, 12, 12, 26];
 
 function folha(XLSX, linhas, larguras){
   const ws = XLSX.utils.aoa_to_sheet(linhas);

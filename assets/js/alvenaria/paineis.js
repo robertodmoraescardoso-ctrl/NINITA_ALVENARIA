@@ -1,6 +1,6 @@
 import { $, esc } from "../ui.js";
 import { lerApontamentos } from "./nuvem.js";
-import { SERVICOS, apartamentosDe, aptosAtivos, composicao, dataCurta, est, executado, hojeISO, linearDe, m2Executado, meuNome, nf, ni, nomeServico, percentual, pessoasDaEquipe, paredesDosAptos, paredesEmFoco, previsto, producaoPorEquipe, quantitativoMaterial, ROTULO, servicoAtual, status, temArea, temPrevisto, unidade, visiveis } from "./modelo.js";
+import { SERVICOS, apartamentosDe, aptosAtivos, composicao, dataCurta, est, executado, hojeISO, linearDe, m2Executado, meuNome, nf, ni, nomeServico, percentual, pessoasDaEquipe, palletsDe, paredesDosAptos, paredesEmFoco, previsto, producaoPorEquipe, quantitativoMaterial, ROTULO, servicoAtual, somaPallets, status, temPallets, temArea, temPrevisto, unidade, visiveis } from "./modelo.js";
 
 /* ------------------------------------------------------------
    PAINÉIS — indicadores, filtros, prazos, equipes e material
@@ -468,25 +468,48 @@ export function desenharMaterial(){
   }
 
   const soma = function(arr, obj){ return arr.reduce(function(s,i){ return s + (obj[i] || 0); }, 0); };
+  /* pallets do saldo: o que ainda falta subir */
+  const comPallet = temPallets();
+  const saldoDe = function(i){ return (q.previsto[i] || 0) - Math.round(q.assentado[i] || 0); };
+  const pBlocos = somaPallets(q.blocos, saldoDe);
+  const celPallet = function(i){
+    if(!comPallet) return "";
+    const p = palletsDe(saldoDe(i), i);
+    return "<td>" + (p === null ? "—" : ni(p)) + "</td>";
+  };
 
   alvo.innerHTML = topo + blocoLinear +
     '<h2 class="alv-titulo">Levante · material · ' + nome + "</h2>" +
     '<div class="alv-tabela-rolante"><table class="alv-tabela">' +
-      "<thead><tr><th>SKU</th><th>Previsto (un)</th><th>Estimado assentado</th><th>Saldo</th></tr></thead><tbody>" +
+      "<thead><tr><th>SKU</th><th>Previsto (un)</th><th>Estimado assentado</th><th>Saldo</th>" +
+        (comPallet ? "<th>Pallets</th>" : "") + "</tr></thead><tbody>" +
       q.ordem.map(function(i){
         const p = q.previsto[i], a = Math.round(q.assentado[i]);
-        return "<tr><td>" + esc(est.skus[i]) + "</td><td>" + ni(p) + "</td><td>" + ni(a) + "</td><td>" + ni(p-a) + "</td></tr>";
+        return "<tr><td>" + esc(est.skus[i]) + "</td><td>" + ni(p) + "</td><td>" + ni(a) + "</td><td>" + ni(p-a) + "</td>" +
+          celPallet(i) + "</tr>";
       }).join("") +
       "</tbody><tfoot>" +
-      linhaTotal("Blocos", soma(q.blocos, q.previsto), Math.round(soma(q.blocos, q.assentado))) +
-      linhaTotal("Telas", soma(q.telas, q.previsto), Math.round(soma(q.telas, q.assentado))) +
+      linhaTotal("Blocos", soma(q.blocos, q.previsto), Math.round(soma(q.blocos, q.assentado)),
+                 comPallet ? ni(pBlocos.total) : null) +
+      linhaTotal("Telas", soma(q.telas, q.previsto), Math.round(soma(q.telas, q.assentado)),
+                 comPallet ? "—" : null) +
       "</tfoot></table></div>" +
+    (comPallet ? avisoPallets(pBlocos) : "") +
     avisoDivisas(q) +
     '<div class="alv-msg">O assentado é estimado: quantidade de projeto × % apontado da parede. ' +
       "Nenhuma contagem de bloco é feita no apontamento. XVAR é bloco cortado, sem dimensão em projeto. " +
       "O bloco calha (CER-CAL) entra como alvenaria; isole-o para separar verga.</div>";
 }
-function linhaTotal(rotulo, previsto, assentado){
+function linhaTotal(rotulo, previsto, assentado, pallets){
   return "<tr><td>" + rotulo + "</td><td>" + ni(previsto) + "</td><td>" + ni(assentado) +
-         "</td><td>" + ni(previsto - assentado) + "</td></tr>";
+         "</td><td>" + ni(previsto - assentado) + "</td>" +
+         (pallets === null || pallets === undefined ? "" : "<td>" + pallets + "</td>") + "</tr>";
+}
+function avisoPallets(pb){
+  return '<div class="alv-msg">Pallets do <b>saldo</b> (o que falta subir): blocos ÷ blocos por pallet do ' +
+    "almoxarifado, <b>arredondado para cima</b>, SKU a SKU — um pallet não mistura SKU." +
+    (pb.semDado.length
+      ? " Sem número de pallet (—): " + pb.semDado.map(function(i){ return esc(est.skus[i]); }).join(", ") + "."
+      : "") +
+    " Tela não vai em pallet.</div>";
 }

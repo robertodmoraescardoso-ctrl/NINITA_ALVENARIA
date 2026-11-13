@@ -33,7 +33,8 @@ assets/
   dados/
     alvenaria-catalogo.json   as 1.272 peças do projeto (953 PR entram no sistema)
     alvenaria-plantas.json    as marcações clicáveis das plantas (só as PR aparecem)
-    alvenaria-apartamentos.json  em que apartamento fica cada parede do tipo
+    alvenaria-apartamentos.json  em que apartamento fica cada parede
+    alvenaria-pallets.json       quantos blocos vêm em cada pallet
   img/plantas/          as cinco pranchas de 1ª fiada, em PNG
   js/ui.js              utilitários de tela
   js/alvenaria/
@@ -341,6 +342,44 @@ e Cobertura aparecem sem material porque não têm elevação publicada.
 
 O gerador de planilha (SheetJS 0.18.5, via cdnjs) só é baixado no
 primeiro clique. Sem internet, o botão avisa e não faz nada.
+
+### Pallets
+
+A tabela de material tem a coluna **Pallets**: quantos pallets ainda
+faltam subir de cada SKU.
+
+**Pallets = saldo ÷ blocos por pallet, sempre arredondado para cima,
+SKU a SKU.** Um pallet não mistura SKU, então o total é a soma dos
+pallets de cada SKU — não o total de blocos dividido por alguma média.
+A conta usa o **saldo** (previsto − assentado estimado): à medida que o
+levante é apontado, os pallets caem junto. Divisão exata não ganha
+pallet a mais (1.100 ÷ 20 = 55).
+
+A quantidade por pallet veio do almoxarifado da obra em 13/11/2026 e
+mora em `assets/dados/alvenaria-pallets.json`. A canaleta da lista é o
+bloco calha do projeto (CER-CAL):
+
+| Família | ×19×39 | ×19×19 | ×19×09 | ×19×04 | Canaleta ×19×19 |
+|---|---|---|---|---|---|
+| 9 | 28 | 52 | 104 | 182 | 52 |
+| 14 | 20 | 40 | 80 | 160 | 40 |
+
+Sem número de pallet, e mostrados com **—**: a família 19
+(19×19×4/9/19/39, uns 80 blocos por pavimento), o bloco cortado XVAR
+e as telas. A família 11,5 veio na lista mas o projeto não usa; ficou
+guardada no JSON, fora da conta.
+
+| Pavimento | Pallets (sem nada assentado) |
+|---|---|
+| Térreo | 462 |
+| Cada tipo | 384 |
+
+Na planilha, a tabela do pavimento ganha a coluna **Pallets a subir**;
+cada pavimento com apartamentos ganha **pallets por apartamento**; e o
+Resumo do prédio ganha **pallets a subir por pavimento**. Como cada
+apartamento arredonda o seu pallet, a soma dos apartamentos pode dar
+um ou dois pallets a mais que o pavimento inteiro — subindo um
+apartamento por vez, vale a coluna dele.
 
 ---
 

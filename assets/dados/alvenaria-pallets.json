@@ -1,0 +1,24 @@
+{
+"origem": "Almoxarifado da obra, 13/11/2026: quantos blocos vêm em cada pallet, por família. A canaleta da lista é o bloco calha do projeto (CER-CAL).",
+"regra": "Pallets = blocos ÷ blocos por pallet, SEMPRE arredondado para cima, SKU a SKU (um pallet não mistura SKU). SKU sem número aqui (família 19, bloco cortado XVAR, telas) aparece sem pallet.",
+"porPallet": {
+  "CER-VER-9X19X39": 28,
+  "CER-VER-9X19X19": 52,
+  "CER-VER-9X19X9": 104,
+  "CER-VER-9X19X4": 182,
+  "CER-CAL-9X19X19": 52,
+  "CER-VER-14X19X39": 20,
+  "CER-VER-14X19X19": 40,
+  "CER-VER-14X19X9": 80,
+  "CER-VER-14X19X4": 160,
+  "CER-CAL-14X19X19": 40
+},
+"foraDoProjeto": {
+  "nota": "Família 11,5 veio na lista do almoxarifado, mas nenhuma parede do projeto usa. Guardada para referência.",
+  "CER-VER-11,5X19X39": 23,
+  "CER-VER-11,5X19X19": 46,
+  "CER-VER-11,5X19X9": 92,
+  "CER-VER-11,5X19X4": 184,
+  "CER-CAL-11,5X19X19": 46
+}
+}
