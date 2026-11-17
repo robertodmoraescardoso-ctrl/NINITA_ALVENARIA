@@ -257,7 +257,7 @@ export async function gravarPlano(p){
 
 export async function lerEstoque(){
   const r = await sb.from("alvenaria_estoque")
-    .select("id,tipo,data,sku,pallets,blocos_por_pallet,blocos,observacao,autor,criado_em")
+    .select("id,tipo,data,sku,pallets,avulsos,blocos_por_pallet,blocos,pavimento,apartamento,observacao,autor,criado_em")
     .is("excluido_em", null)
     .order("data", { ascending:true })
     .order("criado_em", { ascending:true });
@@ -270,7 +270,8 @@ export async function gravarEstoque(linhas){
   const autor = (usuario && usuario.email) || "";
   const r = await sb.from("alvenaria_estoque")
     .insert(linhas.map(function(l){
-      return { tipo: l.tipo, data: l.data, sku: l.sku, pallets: l.pallets,
+      return { tipo: l.tipo, data: l.data, sku: l.sku, pallets: l.pallets, avulsos: l.avulsos || 0,
+               pavimento: l.pavimento || "", apartamento: l.apartamento || "",
                blocos_por_pallet: l.blocos_por_pallet, observacao: l.observacao || "", autor: autor };
     }))
     .select("id");

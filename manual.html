@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Manual da Alvenaria · Villa Ninita</title>
+<link rel="icon" href="assets/img/icone.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* Manual de campo: uma coluna de leitura, índice no topo, mesma
+   paleta do sistema (escura por padrão, clara se o aparelho pedir). */
+:root{
+  --fundo:#0b1220; --painel:#101b30; --painel-2:#1a253c; --borda:#2e3b56;
+  --texto:#e8eaed; --texto-2:#a9b4c6; --texto-3:#75829a;
+  --marca:#005e71; --destaque:#5daaab;
+  --ok:#4fae8b; --alerta:#d9a441; --perigo:#e0645a;
+  --corpo:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --fundo:#f4f6f9; --painel:#ffffff; --painel-2:#eaf0f5; --borda:#cfd8e3;
+    --texto:#14202f; --texto-2:#3c4b60; --texto-3:#66758a;
+    --marca:#005e71; --destaque:#007a8c;
+    --ok:#1f7a58; --alerta:#9a6a08; --perigo:#b8372d;
+    color-scheme:light;
+  }
+}
+:root[data-theme="light"]{
+  --fundo:#f4f6f9; --painel:#ffffff; --painel-2:#eaf0f5; --borda:#cfd8e3;
+  --texto:#14202f; --texto-2:#3c4b60; --texto-3:#66758a;
+  --marca:#005e71; --destaque:#007a8c;
+  --ok:#1f7a58; --alerta:#9a6a08; --perigo:#b8372d;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--fundo);color:var(--texto);font:16px/1.6 var(--corpo);
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-block:0 64px}
+.pagina{max-width:760px;margin:0 auto}
+header.capa{padding-block:32px 20px;border-bottom:1px solid var(--borda);display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+header.capa img{height:38px;width:auto}
+header.capa .t{min-width:0}
+h1{font-size:1.75rem;line-height:1.2;margin:0;text-wrap:balance}
+.sub{color:var(--texto-2);margin:2px 0 0;font-size:.95rem}
+.voltar{margin-left:auto;font-size:.9rem}
+a{color:var(--destaque)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--destaque);outline-offset:2px}
+nav.indice{margin:24px 0;padding:16px 18px;background:var(--painel);border:1px solid var(--borda);border-radius:10px}
+nav.indice b{display:block;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--texto-3);margin-bottom:6px}
+nav.indice ol{margin:0;padding-left:1.3em;columns:2;column-gap:28px}
+nav.indice li{break-inside:avoid;margin:2px 0}
+@media (max-width:560px){ nav.indice ol{columns:1} }
+section{padding-top:28px}
+h2{font-size:1.3rem;line-height:1.3;margin:0 0 10px;text-wrap:balance;border-top:1px solid var(--borda);padding-top:22px}
+h3{font-size:1.02rem;margin:22px 0 6px}
+p,li{max-width:68ch}
+ul,ol{padding-left:1.3em}
+li{margin:4px 0}
+.rotulo{font-family:var(--mono);font-size:.86em;background:var(--painel-2);border:1px solid var(--borda);border-radius:5px;padding:0 5px;white-space:nowrap}
+.quadro{background:var(--painel);border:1px solid var(--borda);border-radius:10px;padding:14px 16px;margin:14px 0}
+.quadro.alerta{border-left:4px solid var(--alerta)}
+.quadro.perigo{border-left:4px solid var(--perigo)}
+.quadro.ok{border-left:4px solid var(--ok)}
+.quadro p{margin:.3em 0}
+.quadro b.t{display:block;margin-bottom:2px}
+.rolar{overflow-x:auto;margin:12px 0}
+table{border-collapse:collapse;width:100%;font-size:.93rem;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--borda);vertical-align:top}
+th{font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-3);font-weight:600}
+.passos{counter-reset:p;list-style:none;padding-left:0}
+.passos > li{counter-increment:p;position:relative;padding-left:38px;margin:10px 0}
+.passos > li::before{content:counter(p);position:absolute;left:0;top:1px;width:26px;height:26px;border-radius:50%;
+  background:var(--marca);color:#fff;font-weight:700;font-size:.85rem;display:grid;place-items:center}
+.papel{display:inline-block;font-size:.78rem;font-weight:700;border-radius:999px;padding:1px 9px;border:1px solid var(--borda);background:var(--painel-2)}
+footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--borda);color:var(--texto-3);font-size:.85rem}
+@media (prefers-reduced-motion: no-preference){ html{scroll-behavior:smooth} }
+</style>
+</head>
+<body>
+<div class="pagina">
+
+<header class="capa">
+  <img src="assets/img/logo.png" alt="Villa Ninita">
+  <div class="t">
+    <h1>Manual da Alvenaria</h1>
+    <p class="sub">Villa Ninita · Poço da Panela · como usar o sistema no dia a dia da obra</p>
+  </div>
+  <a class="voltar" href="./">← Voltar ao sistema</a>
+</header>
+
+<nav class="indice" aria-label="Índice">
+  <b>Índice</b>
+  <ol>
+    <li><a href="#acesso">Acesso e papéis</a></li>
+    <li><a href="#rotina">A rotina da obra</a></li>
+    <li><a href="#tela">A tela principal</a></li>
+    <li><a href="#apontar">Apontar execução</a></li>
+    <li><a href="#lote">Várias paredes de uma vez</a></li>
+    <li><a href="#prazos">Planejar e prazos</a></li>
+    <li><a href="#equipes">Equipes e produtividade</a></li>
+    <li><a href="#material">Material e pallets</a></li>
+    <li><a href="#estoque">Estoque: lançamentos</a></li>
+    <li><a href="#ler">Estoque: como ler os números</a></li>
+    <li><a href="#regras">Regras que não podem falhar</a></li>
+    <li><a href="#problemas">Quando algo não bate</a></li>
+  </ol>
+</nav>
+
+<section id="acesso">
+  <h2>1. Acesso e papéis</h2>
+  <p>O sistema abre no navegador do celular ou do computador, no endereço
+    <span class="rotulo">robertodmoraescardoso-ctrl.github.io/NINITA_ALVENARIA</span>.
+    Entre com o <b>e-mail e a senha</b> que o administrador cadastrou.</p>
+  <p>No celular, use <b>Adicionar à tela inicial</b> no menu do navegador: o sistema fica com ícone, como um aplicativo.</p>
+  <div class="rolar"><table>
+    <thead><tr><th>Papel</th><th>O que pode</th><th>Para quem</th></tr></thead>
+    <tbody>
+      <tr><td><span class="papel">admin</span></td><td>Tudo: apontar, planejar, lançar estoque, cadastrar pessoas e equipes, excluir lançamentos.</td><td>Engenharia da obra</td></tr>
+      <tr><td><span class="papel">apontador</span></td><td>Apontar execução, planejar, cadastrar equipes, lançar recebimento, envio, devolução, quebra e contagem.</td><td>Apontador, almoxarife, encarregado</td></tr>
+      <tr><td><span class="papel">gestor</span></td><td>Só consulta: vê mapa, prazos, equipes, material e estoque, sem gravar.</td><td>Coordenação, diretoria</td></tr>
+    </tbody>
+  </table></div>
+  <p>Quem cadastra as pessoas é o admin, na aba <span class="rotulo">Equipes</span> → <b>Quem tem acesso</b>. A conta de login (e-mail e senha) é criada no Supabase pelo administrador do sistema.</p>
+</section>
+
+<section id="rotina">
+  <h2>2. A rotina da obra</h2>
+  <p>O sistema só é confiável se cada coisa for lançada <b>na hora em que acontece</b>. Esta é a rotina:</p>
+  <div class="rolar"><table>
+    <thead><tr><th>Quando</th><th>Quem</th><th>O que lançar</th></tr></thead>
+    <tbody>
+      <tr><td><b>Chegou caminhão</b></td><td>Almoxarife</td><td>Conferir a nota contra os pallets na descarga e lançar o <b>Recebimento</b>, com o número da NF na observação.</td></tr>
+      <tr><td><b>Guincho subiu material</b></td><td>Almoxarife</td><td>Lançar o <b>Envio para o andar</b>, com o pavimento e o apartamento de destino.</td></tr>
+      <tr><td><b>Fim de cada dia</b></td><td>Apontador</td><td><b>Apontar execução</b> de cada parede trabalhada: % acumulado, dias e equipe.</td></tr>
+      <tr><td><b>Sexta-feira, 16h</b></td><td>Almoxarife</td><td><b>Contagem física</b> do almoxarifado, começando pelos itens A da curva ABC. Antes, conferir se os apontamentos da semana estão em dia.</td></tr>
+      <tr><td><b>Segunda-feira</b></td><td>Engenharia</td><td>Olhar <b>Prazos</b>, <b>cobertura</b> do estoque e o <b>Material por apartamento</b>; programar o guincho da semana e o pedido de compra.</td></tr>
+      <tr><td><b>Apartamento concluído</b></td><td>Encarregado</td><td>Recolher a sobra do apartamento e lançar a <b>Devolução do andar</b>. Só aí o “acima do projeto” daquele apartamento é final.</td></tr>
+      <tr><td><b>Quebra</b></td><td>Almoxarife</td><td>Bloco quebrado na descarga ou no almoxarifado: lançar <b>Quebra / perda</b> com o motivo.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="tela">
+  <h2>3. A tela principal</h2>
+  <p>De cima para baixo:</p>
+  <ul>
+    <li><b>Abas</b>: <span class="rotulo">Mapa</span>, <span class="rotulo">Prazos</span>, <span class="rotulo">Equipes</span>, <span class="rotulo">Material</span>, <span class="rotulo">Estoque</span>, e o link <b>Manual</b>.</li>
+    <li><b>Serviço</b>: <span class="rotulo">Marcação</span> (1ª fiada, medida em metro linear) ou <span class="rotulo">Levante</span> (a parede, medida em m²). Tudo na tela passa a falar do serviço escolhido.</li>
+    <li><b>Pavimentos</b>: semienterrado, térreo, 1º ao 6º tipo, academia e cobertura. Cada botão mostra quantas paredes e o % executado.</li>
+    <li><b>Indicadores</b>: % executado, paredes concluídas, fora do prazo e sem responsável.</li>
+  </ul>
+  <h3>No Mapa</h3>
+  <ul>
+    <li><b>Planta</b> mostra a prancha de 1ª fiada com um pino em cada parede, colorido pela situação. <b>Mosaico</b> mostra as paredes como blocos, mais fácil no celular.</li>
+    <li><b>Apartamento</b>: toque em um ou mais (01A, 02A, 01B, 02B, 01C, 02C) para ver só eles. A escolha vale também no Material e atravessa os andares.</li>
+    <li><b>Situação</b>: Todas, Não iniciadas, Em execução, Concluídas, Fora do prazo, Com aviso, Minhas.</li>
+    <li><b>Busca</b>: digite o código, como <span class="rotulo">PR045</span>, e a planta vai até a parede.</li>
+  </ul>
+  <div class="quadro"><p>Só as paredes <b>PR</b> estão no sistema. Shafts (SH) ficam fora do controle de alvenaria.</p></div>
+</section>
+
+<section id="apontar">
+  <h2>4. Apontar execução</h2>
+  <ol class="passos">
+    <li>Escolha o serviço no alto (<b>Levante</b> ou <b>Marcação</b>) e o pavimento.</li>
+    <li>Toque na parede, na planta ou no mosaico. Abre a ficha da parede.</li>
+    <li>Em <b>Apontar execução</b>, marque o <b>% executado</b> (0, 25, 50, 75, 100 ou digite outro valor).</li>
+    <li>Preencha <b>Começou em</b> e <b>Terminou em</b>. Uma parede levantada de segunda a quarta é um intervalo de três dias, não um dia só.</li>
+    <li>Escolha <b>Quem executou</b> (a equipe) e toque em <b>Registrar</b>.</li>
+  </ol>
+  <div class="quadro alerta"><b class="t">O % é acumulado</b>
+    <p>Se a parede estava em 50% e hoje terminou, aponte <b>100%</b>, não 50%. O sistema calcula sozinho o que foi feito no período.</p></div>
+  <h3>Errou um lançamento?</h3>
+  <p>No <b>Histórico</b> da ficha, toque no <b>×</b> do lançamento errado e depois em <b>Excluir?</b>. A parede volta ao lançamento anterior. Nada é apagado de verdade: fica registrado para auditoria.</p>
+</section>
+
+<section id="lote">
+  <h2>5. Várias paredes de uma vez</h2>
+  <p>No Mapa, mude para <b>Mosaico</b> e toque em <b>Selecionar várias</b>. Marque as paredes e use:</p>
+  <ul>
+    <li><b>Apontar</b>: o mesmo %, intervalo e equipe para todas, por exemplo a 1ª fiada inteira de um apartamento.</li>
+    <li><b>Planejar</b>: responsável e datas para todas.</li>
+    <li><b>Material</b>: blocos necessários só daquelas paredes.</li>
+  </ul>
+</section>
+
+<section id="prazos">
+  <h2>6. Planejar e prazos</h2>
+  <p>Na ficha da parede, em <b>Planejamento</b>: <b>Responsável</b>, <b>Início previsto</b> e <b>Fim previsto</b>, e então <b>Salvar planejamento</b>. A aba <span class="rotulo">Prazos</span> lista o que está atrasado, o que vence na semana e quem é responsável por cada parede.</p>
+  <p>Parede com fim previsto já vencido e menos de 100% fica <b>vermelha</b> (fora do prazo) no mapa.</p>
+</section>
+
+<section id="equipes">
+  <h2>7. Equipes e produtividade</h2>
+  <p>Cadastre cada equipe em <span class="rotulo">Equipes</span>: em <b>Profissional(is)</b>, os pedreiros separados por ponto e vírgula (<span class="rotulo">Matias; Severino</span>); em <b>Servente(s)</b>, os serventes, da mesma forma.</p>
+  <p>A tabela de produção mostra, por equipe e no período escolhido (7 ou 30 dias), quanto foi feito, os <b>dias em obra</b> e o m²/dia (RUP aproximada). Os dias vêm dos intervalos apontados: por isso o intervalo correto importa.</p>
+  <div class="quadro alerta"><p>O nome da equipe é o texto que liga o apontamento à equipe. Se mudar a composição de uma equipe, os lançamentos antigos continuam com o nome antigo.</p></div>
+</section>
+
+<section id="material">
+  <h2>8. Material e pallets</h2>
+  <p>A aba <span class="rotulo">Material</span> mostra o quantitativo de projeto do pavimento escolhido, ou só dos apartamentos marcados:</p>
+  <ul>
+    <li><b>Previsto</b>, <b>estimado assentado</b> (previsto × % apontado) e <b>saldo</b> de cada bloco.</li>
+    <li><b>Pallets</b> do saldo: blocos ÷ blocos por pallet, sempre arredondado para cima, bloco a bloco.</li>
+    <li>O resumo do alto segue o serviço: m² no Levante, metro linear na Marcação.</li>
+  </ul>
+  <p><b>Exportar</b> gera uma planilha Excel do pavimento (ou dos apartamentos marcados) ou do prédio inteiro, com pallets por apartamento e por pavimento.</p>
+  <div class="rolar"><table>
+    <thead><tr><th>Blocos por pallet</th><th>×19×39</th><th>×19×19</th><th>×19×09</th><th>×19×04</th><th>Canaleta</th></tr></thead>
+    <tbody>
+      <tr><td>Família 9</td><td>28</td><td>52</td><td>104</td><td>182</td><td>52</td></tr>
+      <tr><td>Família 14</td><td>20</td><td>40</td><td>80</td><td>160</td><td>40</td></tr>
+    </tbody>
+  </table></div>
+  <p>Família 19, bloco cortado (XVAR) e telas não têm número de pallet e não entram em pallets nem no estoque.</p>
+</section>
+
+<section id="estoque">
+  <h2>9. Estoque: lançamentos</h2>
+  <p>Na aba <span class="rotulo">Estoque</span>, em <b>Lançar</b>, escolha o tipo, a data e preencha os pallets de cada bloco. A coluna <b>= blocos</b> mostra a conversão na hora.</p>
+  <div class="rolar"><table>
+    <thead><tr><th>Tipo</th><th>Quando usar</th><th>Detalhes</th></tr></thead>
+    <tbody>
+      <tr><td><b>Recebimento</b></td><td>Chegou material na obra</td><td>Só pallets inteiros. NF e fornecedor na observação.</td></tr>
+      <tr><td><b>Envio para o andar</b></td><td>Material saiu do almoxarifado para um pavimento</td><td>Escolha o pavimento e o apartamento (ou <i>andar inteiro / área comum</i>). O botão <b>Sugerir pelo que falta enviar</b> preenche com o que o apartamento ainda precisa.</td></tr>
+      <tr><td><b>Devolução do andar</b></td><td>Sobra voltou para o almoxarifado</td><td>Mesmo pavimento e apartamento do envio. Faça ao fechar cada apartamento.</td></tr>
+      <tr><td><b>Quebra / perda</b></td><td>Bloco perdido no almoxarifado ou na descarga</td><td>Motivo na observação.</td></tr>
+      <tr><td><b>Contagem física</b></td><td>Toda sexta-feira</td><td>Só o que está no <b>almoxarifado</b>. Em branco = não contado; <b>0</b> = contado e não tem.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Pallet aberto</h3>
+  <p>Em envio, devolução, quebra e contagem há a coluna <b>Avulsos</b>: os blocos soltos de um pallet aberto. Exemplo: 12 pallets fechados e um aberto com 7 blocos → <b>Pallets 12</b>, <b>Avulsos 7</b>. Não deixe de contar o pallet aberto: no 14×19×39 cada pallet esquecido são 20 blocos de erro.</p>
+  <h3>Lançou errado?</h3>
+  <p>Em <b>Lançamentos</b>, no fim da página, toque no <b>×</b> e depois em <b>Excluir?</b>, e lance de novo certo.</p>
+</section>
+
+<section id="ler">
+  <h2>10. Estoque: como ler os números</h2>
+  <div class="rolar"><table>
+    <thead><tr><th>Número</th><th>O que é</th><th>O que fazer</th></tr></thead>
+    <tbody>
+      <tr><td><b>No almoxarifado</b></td><td>Recebido − enviado + devolvido − quebra. Depois de uma contagem, parte do contado.</td><td>Bate com o que se vê no pátio?</td></tr>
+      <tr><td><b>Divergência</b></td><td>Contado − o que o sistema esperava, na última contagem.</td><td>Negativa: sumiu material sem lançamento (envio esquecido, quebra não lançada, desvio). Investigar.</td></tr>
+      <tr><td><b>Acima do projeto</b></td><td>Enviado líquido para o andar/apartamento ÷ blocos de projeto já levantados lá − 1.</td><td>Vale como resultado quando o destino chega a <b>100%</b> e a sobra foi devolvida. Antes disso aparece como <i>parcial</i>. Acima de <b>5%</b> fica vermelho: verificar quebra, corte e modulação na frente de serviço.</td></tr>
+      <tr><td><b>No andar (estim.)</b></td><td>Enviado − já levantado: o que deveria estar empilhado no andar.</td><td>Negativo: levantou-se mais do que foi enviado. Falta lançar envio.</td></tr>
+      <tr><td><b>Cobertura</b></td><td>Quantas semanas o almoxarifado aguenta no ritmo das últimas 4 semanas.</td><td>Abaixo de <b>2 semanas</b> fica vermelho: fazer o pedido.</td></tr>
+      <tr><td><b>Curva ABC</b></td><td>Blocos ordenados pelos pallets parados. A = os primeiros 80%, B até 95%, C o resto.</td><td>Contar sempre os A primeiro; conferir se não há compra demais de item A.</td></tr>
+      <tr><td><b>Quebra</b></td><td>Blocos lançados como perda ÷ recebido.</td><td>Alta e concentrada em uma entrega: cobrar fornecedor ou transporte.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="quadro"><p>O sistema não sabe o que é parede pronta sem o apontamento: o consumo de projeto vem de <b>blocos de cada parede × % levantado</b>. Apontamento atrasado faz o estoque parecer maior e o “acima do projeto” parecer maior também.</p></div>
+</section>
+
+<section id="regras">
+  <h2>11. Regras que não podem falhar</h2>
+  <div class="quadro ok">
+    <ol>
+      <li>Apontar <b>no mesmo dia</b>, com o <b>% acumulado</b> e o <b>intervalo</b> de dias certos.</li>
+      <li>Nenhum bloco sai do almoxarifado sem <b>Envio para o andar</b> lançado.</li>
+      <li>Toda sobra que volta tem <b>Devolução</b> lançada.</li>
+      <li>Toda quebra tem <b>Quebra / perda</b> lançada, com motivo.</li>
+      <li>Contagem física <b>toda sexta</b>, com pallet aberto em <b>Avulsos</b>, e apontamentos em dia antes de contar.</li>
+      <li>Recebimento lançado <b>na descarga</b>, conferido contra a NF.</li>
+    </ol>
+  </div>
+</section>
+
+<section id="problemas">
+  <h2>12. Quando algo não bate</h2>
+  <div class="rolar"><table>
+    <thead><tr><th>Sintoma</th><th>Causa provável</th><th>O que fazer</th></tr></thead>
+    <tbody>
+      <tr><td>Não vejo um botão ou aba que deveria existir</td><td>Navegador mostrando versão antiga</td><td>Recarregar: no computador <span class="rotulo">Ctrl+Shift+R</span>; no celular, fechar a aba e abrir de novo.</td></tr>
+      <tr><td>Não consigo gravar nada</td><td>Papel <b>gestor</b>, ou sessão expirada</td><td>Pedir ao admin para ajustar o papel; ou tocar em <b>Sair</b> e entrar de novo.</td></tr>
+      <tr><td>Saldo do almoxarifado negativo</td><td>Recebimento não lançado, ou envio lançado em dobro</td><td>Conferir NFs e o histórico de lançamentos.</td></tr>
+      <tr><td>“No andar” negativo</td><td>Envio não lançado, ou apontamento adiantado</td><td>Lançar o envio que faltou; conferir os % apontados.</td></tr>
+      <tr><td>“Acima do projeto” muito alto e <i>parcial</i></td><td>Material ainda empilhado no andar</td><td>Normal enquanto o apartamento não fecha. Fechar, devolver a sobra, e o número cai.</td></tr>
+      <tr><td>Parede no apartamento errado</td><td>Divisa mal atribuída</td><td>Avisar o admin com o código da parede (ex.: PR029) e o apartamento certo.</td></tr>
+      <tr><td>Bloco que não aparece no estoque</td><td>Família 19, XVAR ou tela: sem número de pallet</td><td>Controlar por fora até o almoxarifado informar o pallet desses itens.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<footer>
+  Manual da Alvenaria · Villa Ninita · versão de 17/11/2026. As regras de cálculo completas estão no README do sistema.
+</footer>
+
+</div>
+</body>
+</html>
