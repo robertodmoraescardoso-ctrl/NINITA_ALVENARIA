@@ -54,9 +54,10 @@ const NOTA = "O assentado é estimado: quantidade de projeto × % de levante apo
   "Nenhuma contagem de bloco é feita no apontamento. XVAR é bloco cortado, sem dimensão em projeto. " +
   "O bloco calha (CER-CAL) entra como alvenaria; isole-o para separar verga.";
 
-const NOTA_PROG = "Cada caminhão leva cada SKU na proporção do seu peso no total. O espaço livre do último caminhão (G4) é " +
-  "completado com reforço pelo peso de uso; a sobra do arredondamento vai para o SKU mais usado. Base: coluna F " +
-  "(Pallets 20% perda) da aba ";
+const NOTA_PROG = "Cada caminhão leva cada SKU na proporção do que falta entregar dele (tabela auxiliar abaixo); no " +
+  "arredondamento, só os SKUs de maior fração sobem 1 pallet, até fechar a capacidade — nenhum caminhão passa do limite. " +
+  "O espaço livre do último caminhão (G4) é completado com reforço pelo peso de uso; a sobra do arredondamento vai para o " +
+  "SKU mais usado. Base: coluna F (Pallets 20% perda) da aba ";
 
 /* ---------- estilo (layout do sistema) ---------- */
 const COR = { marca: "005E71", escuro: "101B30", claro: "EAF0F5", borda: "9AA8BA", cinza: "66758A",
@@ -344,9 +345,13 @@ function folhaProgramacao(XLSX, abaPav, info){
   put(0, 6, txt("Total de pallets a entregar"), esq);             put(1, 6, fx("B" + T, QTD));
   put(0, 7, txt("Nº de caminhões"), esq);                         put(1, 7, fx("ROUNDUP(B6/B3,0)", "0"));
   put(0, 8, txt("Semanas de entrega (2 entregas/semana)"), esq);  put(1, 8, fx("ROUNDUP(B7/2,0)", "0"));
+  /* a planilha tem k colunas de entrega; se mudarem a capacidade e
+     precisar de mais caminhões, avisa em vez de errar calado */
+  put(3, 6, fx('IF(B7>' + k + ',"Faltam colunas: são "&B7&" caminhões e a planilha tem ' + k + '. Exporte de novo pelo sistema.","")', null, "s"),
+      { font: fonte({ bold: true, color: { rgb: "C00000" } }), alignment: { horizontal: "left", vertical: "center" } });
   put(3, 4, txt("Espaço livre no último caminhão (pallets)"), mescla(esq, { font: fonte({ bold: true }) }));
-  put(6, 4, fx("B3-(B" + T + "-SUMPRODUCT(ROUND(B" + r0 + ":B" + rN + "*MIN((B7-1)*B3,B" + T + ")/B" + T + ",0)))", QTD),
-      { font: fonte({ bold: true }) });
+  /* todo caminhão antes do último sai cheio: já foram MIN((B7−1)×B3; total) */
+  put(6, 4, fx("B3-(B" + T + "-MIN((B7-1)*B3,B" + T + "))", QTD), { font: fonte({ bold: true }) });
 
   /* 3. cabeçalho */
   for(let c = cE; c <= cUlt; c++){
@@ -361,8 +366,17 @@ function folhaProgramacao(XLSX, abaPav, info){
   put(cConf, 10, txt("Confere"), EST.cab);
   put(cRef, 10, txt("Reforço no último caminhão"), EST.cab);
 
-  /* 4. linhas por SKU */
+  /* 4. linhas por SKU
+     Rateio pelo maior resto, caminhão a caminhão: a parte ideal de
+     cada SKU (tabela auxiliar, abaixo da nota) é o que FALTA dele ×
+     carga do caminhão ÷ o que falta no total. Todos arredondam para
+     baixo e só as maiores frações sobem 1 pallet, até fechar a carga:
+     nenhum caminhão passa da capacidade e nenhum SKU passa do saldo.
+     Empate de fração: vence a linha de cima. */
   const J = L(cRef), H = L(cTot), UL = L(cUlt);
+  const hTit = T + 6, h0 = T + 7, hN = h0 + n - 1;     // tabela auxiliar
+  const hr = function(r){ return h0 + (r - r0); };
+  const fr = function(x){ return "ROUND(MOD(" + x + ",1),9)"; };
   for(let r = r0; r <= rN; r++){
     const rPav = info.primeira + (r - r0);
     put(0, r, fx(aba + "!A" + rPav, null, "s"), mescla(verde, esq));
@@ -370,9 +384,19 @@ function folhaProgramacao(XLSX, abaPav, info){
     put(2, r, fx("B" + r + "/" + A, "0.0%"));
     for(let c = cE; c <= cUlt; c++){
       const D = L(c);
-      put(c, r, fx('IF(' + D + '$9>$B$7,"",ROUND($B' + r + '*MIN(' + D + '$9*$B$3,' + A + ')/' + A + ',0)-ROUND($B' + r +
-        '*MIN((' + D + '$9-1)*$B$3,' + A + ')/' + A + ',0)+IF(' + D + '$9=$B$7,$' + J + r + ',0))', QTD));
+      const xs = D + "$" + h0 + ":" + D + "$" + hN, x = D + hr(r);
+      const carga = "MIN($B$3," + A + "-(" + D + "$9-1)*$B$3)";
+      const acima = r > r0 ? "+SUMPRODUCT(--(" + fr(D + "$" + h0 + ":" + D + (hr(r) - 1)) + "=" + fr(x) + "))" : "";
+      const posicao = "SUMPRODUCT(--(" + fr(xs) + ">" + fr(x) + "))" + acima;
+      const falta = carga + "-SUMPRODUCT(INT(" + xs + "))";
+      put(c, r, fx('IF(' + D + '$9>$B$7,"",INT(' + x + ')+IF(' + posicao + '<' + falta + ',1,0)+IF(' + D + '$9=$B$7,$' + J + r + ',0))', QTD));
+      /* parte ideal deste SKU neste caminhão */
+      const jaFoi = c > cE ? "-SUM($D" + r + ":" + L(c - 1) + r + ")" : "";
+      const jaFoiTot = c > cE ? "-SUM($D$" + T + ":" + L(c - 1) + "$" + T + ")" : "";
+      put(c, hr(r), fx('IF(' + D + '$9>$B$7,0,IF((' + A + jaFoiTot + ')<=0,0,($B' + r + jaFoi + ')*' + carga + '/(' + A + jaFoiTot + ')))', "0.000"),
+          { font: fonte({ sz: 11, color: { rgb: COR.cinza } }) });
     }
+    put(0, hr(r), fx("A" + r, null, "s"), mescla({ font: fonte({ sz: 11, color: { rgb: COR.cinza } }) }, esq));
     put(cTot, r, fx("SUM(D" + r + ":" + UL + r + ")", QTD));
     put(cConf, r, fx('IF(' + H + r + '=B' + r + '+' + J + r + ',"OK","Revisar")', null, "s"));
     put(cRef, r, fx("ROUNDDOWN($C" + r + "*$G$4,0)+IF($B" + r + "=MAX($B$" + r0 + ":$B$" + rN + "),$G$4-SUMPRODUCT(ROUNDDOWN($C$" + r0 +
@@ -398,6 +422,8 @@ function folhaProgramacao(XLSX, abaPav, info){
   /* 7. nota */
   put(0, T + 4, txt(NOTA_PROG + abaPav + "; XVAR e telas não vão em pallet."), EST.nota);
   for(let c = 1; c <= cRef; c++) put(c, T + 4, txt(""), EST.nota);
+  put(0, hTit, txt("Cálculo auxiliar do rateio · parte ideal de cada SKU por caminhão (não editar)"),
+      mescla(EST.secao, { font: fonte({ bold: true, sz: 11, color: { rgb: COR.cinza } }) }));
 
   ws["!ref"] = "A1:" + ref(cRef, maxR);
   ws["!merges"] = [{ s: { r: T + 3, c: 0 }, e: { r: T + 3, c: cRef } }];
