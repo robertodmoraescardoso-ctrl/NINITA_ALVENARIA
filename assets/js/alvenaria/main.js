@@ -13,6 +13,7 @@ import { definirPeriodo, desenharAptosMapa, desenharEquipes, desenharFiltros, de
          desenharPavimentos, desenharPerfis, desenharPrazos, desenharProducao } from "./paineis.js";
 import { alternarInversao, aplicarZoom, desenharMosaico, desenharPlanta, irAtePeca, mudarZoom, pintarPinos } from "./vistas.js";
 import { exportarMaterial } from "./exportar.js";
+import { desenharEstoque } from "./estoque.js";
 
 /* ------------------------------------------------------------
    ALVENARIA DE VEDAÇÃO — ponto de partida
@@ -147,7 +148,7 @@ function repintar(){
   desenharPavimentos();
   desenharIndicadores();
 
-  const abas = { mapa:"#alvMapa", prazos:"#alvPrazosTela", equipes:"#alvEquipesTela", material:"#alvMaterial" };
+  const abas = { mapa:"#alvMapa", prazos:"#alvPrazosTela", equipes:"#alvEquipesTela", material:"#alvMaterial", estoque:"#alvEstoqueTela" };
   for(const k in abas){ const el = $(abas[k]); if(el) el.classList.toggle("oculto", est.aba !== k); }
   Array.prototype.forEach.call(document.querySelectorAll("[data-aba]"), function(b){
     b.setAttribute("aria-selected", String(b.dataset.aba === est.aba));
@@ -259,6 +260,7 @@ document.addEventListener("click", function(ev){
     est.aba = alvo.dataset.aba;
     repintar();
     if(est.aba === "equipes") desenharEquipes();
+    if(est.aba === "estoque") desenharEstoque(true);
     return;
   }
   if(alvo.dataset.vista){

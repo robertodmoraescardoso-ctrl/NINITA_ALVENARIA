@@ -252,3 +252,40 @@ export async function gravarPlano(p){
   if(r.error) throw r.error;
   return r.data;
 }
+
+/* ---------- estoque central de blocos (migração 006) ---------- */
+
+export async function lerEstoque(){
+  const r = await sb.from("alvenaria_estoque")
+    .select("id,tipo,data,sku,pallets,blocos_por_pallet,blocos,observacao,autor,criado_em")
+    .is("excluido_em", null)
+    .order("data", { ascending:true })
+    .order("criado_em", { ascending:true });
+  if(r.error) throw r.error;
+  return r.data || [];
+}
+
+/* várias linhas de uma vez: um recebimento costuma trazer vários SKUs */
+export async function gravarEstoque(linhas){
+  const autor = (usuario && usuario.email) || "";
+  const r = await sb.from("alvenaria_estoque")
+    .insert(linhas.map(function(l){
+      return { tipo: l.tipo, data: l.data, sku: l.sku, pallets: l.pallets,
+               blocos_por_pallet: l.blocos_por_pallet, observacao: l.observacao || "", autor: autor };
+    }))
+    .select("id");
+  if(r.error) throw r.error;
+  return r.data || [];
+}
+
+/* exclusão lógica, como a dos apontamentos */
+export async function apagarMovimento(id){
+  const r = await sb.from("alvenaria_estoque")
+    .update({ excluido_em: new Date().toISOString() })
+    .eq("id", id)
+    .is("excluido_em", null)
+    .select("id");
+  if(r.error) throw r.error;
+  if(!r.data || !r.data.length) throw new Error("O lançamento não foi encontrado ou já tinha sido excluído.");
+  return r.data[0];
+}

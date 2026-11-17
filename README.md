@@ -46,6 +46,7 @@ assets/
     lote.js             seleção múltipla: material, apontar, planejar
     paineis.js          indicadores, prazos, equipes e material
     exportar.js         planilha Excel do quantitativo de material
+    estoque.js          estoque central: recebimento, contagem, consumo a mais, curva ABC
 migracoes/              scripts SQL do banco, numerados (rodar em ordem)
 ```
 
@@ -483,6 +484,51 @@ Na planilha, cada aba de pavimento com quantitativo de bloco (térreo e
 tipos) ganha a tabela **saldo por apartamento** (o que ainda falta
 subir), com uma coluna por apartamento e, na última, o pavimento ou o
 conjunto escolhido — as colunas somam o total.
+
+---
+
+## Estoque de blocos
+
+A aba **Estoque** controla o almoxarifado central da obra. Regras
+combinadas com o Roberto em 17/11/2026:
+
+- **Um estoque só**, da obra inteira.
+- **Recebimento** e **contagem física** são lançados em **pallets
+  inteiros**; o sistema converte em blocos pela tabela do almoxarifado
+  e grava a conversão em cada lançamento (se o pallet mudar, o
+  histórico não muda).
+- **Não se lança saída.** O consumo de projeto vem dos apontamentos de
+  elevação: blocos de projeto de cada parede × % levantado. Ele inclui
+  todos os pavimentos com quantitativo (térreo e tipos).
+- **O consumo a mais aparece na contagem física**, por SKU:
+
+  | | |
+  |---|---|
+  | consumo real até a contagem | recebido até aquela data − contado |
+  | consumo de projeto até a contagem | blocos das paredes × % levantado naquela data |
+  | **acima do projeto** | real ÷ projeto − 1 |
+
+  O % levantado "naquela data" sai do histórico de apontamentos (o
+  último lançamento de cada parede até o dia da contagem). Por isso
+  vale contar com os apontamentos em dia.
+- **Estoque atual** = recebido − consumo de projeto. Depois de uma
+  contagem, parte do contado: contado + recebido depois − consumo de
+  projeto depois. Estoque negativo é aviso de recebimento não lançado
+  ou de apontamento à frente da obra.
+- **Curva ABC** por quantidade, em pallets (um pallet conta igual para
+  qualquer bloco): A são os itens que somam os primeiros 80% do
+  estoque, B até 95%, C o resto.
+
+Contagem: deixe em branco o SKU que não foi contado; **0** quer dizer
+"contado, não tem nenhum". Só admin e apontador lançam; o gestor vê.
+Lançamento errado se exclui com dois toques (× → Excluir?), como os
+apontamentos — exclusão lógica, a linha continua no banco.
+
+Ficam **fora** do estoque, por não terem número de pallet: família 19,
+bloco cortado XVAR e telas.
+
+Banco: tabela `alvenaria_estoque` (migração `006_estoque.sql`, rodada
+em 17/11/2026). Código: `assets/js/alvenaria/estoque.js`.
 
 ---
 
