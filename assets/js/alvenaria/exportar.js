@@ -1,30 +1,30 @@
 import { $ } from "../ui.js";
-import { apartamentosDe, aptosAtivos, est, hojeISO, palletsDe, quantitativoMaterial, somaPallets, temPallets } from "./modelo.js";
+import { apartamentosDe, aptosAtivos, est, hojeISO, palletsDe, porPallet, quantitativoMaterial, somaPallets, temPallets } from "./modelo.js";
 
 /* ------------------------------------------------------------
    EXPORTAR — quantitativo de material em planilha Excel (.xlsx)
 
    Dois escopos:
    · pavimento: a mesma tabela da aba Material, para o pavimento
-     aberto na tela;
+     aberto na tela (respeita os apartamentos escolhidos), seguida
+     da aba "Programação Entregas";
    · prédio: uma aba "Resumo" com SKU × pavimento e os totais, e
-     depois uma aba por pavimento, igual à do escopo anterior.
+     depois uma aba por pavimento.
 
-   Nos pavimentos divididos em apartamentos (o tipo), cada aba
-   ganha a tabela "saldo por apartamento": o que ainda falta subir
-   para cada um. A exportação do pavimento respeita os
-   apartamentos escolhidos na tela.
+   Na aba do pavimento, a tabela de SKUs começa SEMPRE na linha 9
+   (cabeçalho na 8): a Programação Entregas aponta para ela por
+   fórmula ('<aba>'!A9, '<aba>'!F9…). Os blocos que vão em pallet
+   vêm primeiro e contíguos; depois o XVAR; depois as telas.
 
-   Os números saem de quantitativoMaterial(), a mesma conta da
-   tela. A biblioteca (SheetJS) só é baixada no primeiro clique:
-   quem nunca exporta não paga por ela.
+   Biblioteca: xlsx-js-style (SheetJS com estilos — fonte, cor,
+   borda, altura de linha). Só é baixada no primeiro clique.
    ------------------------------------------------------------ */
 
-const XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+const XLSX_URL = "https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js";
 let carregando = null;
 
 function carregarXlsx(){
-  if(window.XLSX) return Promise.resolve(window.XLSX);
+  if(window.XLSX && window.XLSX.utils) return Promise.resolve(window.XLSX);
   if(!carregando){
     carregando = new Promise(function(ok, falha){
       const s = document.createElement("script");
@@ -46,17 +46,50 @@ function carregarXlsx(){
   return carregando;
 }
 
-const NOTA_PALLET = "Pallets: blocos ÷ blocos por pallet (lista do almoxarifado, 13/11/2026), arredondado para cima, " +
-  "SKU a SKU — um pallet não mistura SKU. — = sem número de pallet (família 19 e bloco cortado XVAR). Tela não vai em pallet.";
+const NOTA_PALLET = "Pallets: saldo ÷ blocos por pallet (lista do almoxarifado, 13/11/2026), arredondado para cima, SKU a SKU — " +
+  "um pallet não mistura SKU. Coluna F com 20% de perda. Blocos por pallet em azul são editáveis: a família 19 está em branco " +
+  "porque o almoxarifado ainda não informou; preencha e a planilha recalcula. XVAR e telas não vão em pallet.";
 
 const NOTA = "O assentado é estimado: quantidade de projeto × % de levante apontado em cada parede. " +
   "Nenhuma contagem de bloco é feita no apontamento. XVAR é bloco cortado, sem dimensão em projeto. " +
   "O bloco calha (CER-CAL) entra como alvenaria; isole-o para separar verga.";
 
+const NOTA_PROG = "Cada caminhão leva cada SKU na proporção do seu peso no total. O espaço livre do último caminhão (G4) é " +
+  "completado com reforço pelo peso de uso; a sobra do arredondamento vai para o SKU mais usado. Base: coluna F " +
+  "(Pallets 20% perda) da aba ";
+
+/* ---------- estilo (layout do sistema) ---------- */
+const COR = { marca: "005E71", escuro: "101B30", claro: "EAF0F5", borda: "9AA8BA", cinza: "66758A",
+              azul: "0000FF", verde: "008000", preto: "000000", branco: "FFFFFF" };
+function fonte(extra){ return Object.assign({ name: "Calibri", sz: 12, color: { rgb: COR.preto } }, extra || {}); }
+const LINHA = function(cor){ return { style: "thin", color: { rgb: cor || COR.borda } }; };
+const EST = {
+  base:      { font: fonte() },
+  titulo:    { font: fonte({ sz: 14, bold: true, color: { rgb: COR.marca } }) },
+  sub:       { font: fonte({ color: { rgb: COR.cinza } }) },
+  secao:     { font: fonte({ bold: true, color: { rgb: COR.marca } }) },
+  cab:       { font: fonte({ bold: true, color: { rgb: COR.branco } }), fill: { patternType: "solid", fgColor: { rgb: COR.marca } },
+               alignment: { horizontal: "center", vertical: "center", wrapText: true }, border: { bottom: LINHA(COR.escuro) } },
+  cabEsq:    { font: fonte({ bold: true, color: { rgb: COR.branco } }), fill: { patternType: "solid", fgColor: { rgb: COR.marca } },
+               alignment: { horizontal: "left", vertical: "center", wrapText: true }, border: { bottom: LINHA(COR.escuro) } },
+  total:     { font: fonte({ bold: true }), fill: { patternType: "solid", fgColor: { rgb: COR.claro } }, border: { top: LINHA(COR.escuro) } },
+  nota:      { font: fonte({ sz: 11, color: { rgb: COR.cinza } }), alignment: { wrapText: true, vertical: "top" } }
+};
+function mescla(a, b){
+  const r = {};
+  [a, b].forEach(function(o){ if(!o) return; for(const k in o){ r[k] = (typeof o[k] === "object" && !Array.isArray(o[k])) ? Object.assign({}, r[k] || {}, o[k]) : o[k]; } });
+  return r;
+}
+
 function dataBR(iso){ return iso.slice(8,10) + "/" + iso.slice(5,7) + "/" + iso.slice(0,4); }
 function m1(v){ return Math.round(v * 10) / 10; }
 function m2(v){ return Math.round(v * 100) / 100; }
 function soma(ids, obj){ return ids.reduce(function(s,i){ return s + (obj[i] || 0); }, 0); }
+function col(n){ let s = ""; n++; while(n > 0){ const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
+function ref(c, r){ return col(c) + r; }                      // c 0-based, r 1-based
+function abaRef(nome){ return "'" + String(nome).replace(/'/g, "''") + "'"; }
+const ehTela = function(i){ return String(est.skus[i]).indexOf("TELA") === 0; };
+const ehXvar = function(i){ return /XVAR/.test(String(est.skus[i])); };
 
 function cabecalho(titulo){
   return [
@@ -67,9 +100,60 @@ function cabecalho(titulo){
   ];
 }
 
-/* uma aba por pavimento: material do levante e metro linear da marcação */
+/* ---------- aba do pavimento ---------- */
+/* Devolve as linhas (aoa), as células com fórmula/estilo próprio e
+   onde está a tabela de pallets, para a Programação Entregas. */
 function linhasPavimento(q){
   const L = cabecalho("Material · " + q.nome + (q.aptos.length ? " · " + q.aptos.join(" + ") : ""));
+  const extras = [];   // {c, r (1-based), cell}
+  const info = { primeira: 9, n: 0, palletsEstimados: 0 };
+  L.push(["LEVANTE · MATERIAL"]);                                      // linha 5
+  L.push(["Pallets com 20% de perda sobre o saldo. Blocos por pallet em azul: editável."]);   // 6
+  L.push([]);                                                          // 7
+  if(q.ordem.length){
+    const prog = q.ordem.filter(function(i){ return !ehTela(i) && !ehXvar(i); });
+    const xvar = q.ordem.filter(ehXvar), telas = q.ordem.filter(ehTela);
+    L.push(["SKU", "Previsto (un)", "Estimado assentado (un)", "Saldo (un)", "Blocos por pallet",
+            "Pallets (c/ 20% perda)", "Pallets (sem perda)"]);       // 8
+    const linhaSku = function(i, emPallet){
+      const r = L.length + 1;
+      const p = q.previsto[i] || 0, a = Math.round(q.assentado[i] || 0);
+      L.push([est.skus[i], p, a, null, null, null, null]);
+      extras.push({ c: 3, r: r, cell: { t: "n", f: "B" + r + "-C" + r } });
+      if(emPallet){
+        const bpp = porPallet(i);
+        extras.push({ c: 4, r: r, cell: bpp === null ? { t: "s", v: "", s: { font: fonte({ color: { rgb: COR.azul } }) } }
+                                                     : { t: "n", v: bpp, s: { font: fonte({ color: { rgb: COR.azul } }) } } });
+        extras.push({ c: 5, r: r, cell: { t: "n", f: 'IF(E' + r + '="",0,ROUNDUP(D' + r + '*1.2/E' + r + ',0))' } });
+        extras.push({ c: 6, r: r, cell: { t: "n", f: 'IF(E' + r + '="","",ROUNDUP(D' + r + '/E' + r + ',0))' } });
+        if(bpp !== null) info.palletsEstimados += Math.ceil(Math.max(0, p - a) * 1.2 / bpp);
+      }
+      return r;
+    };
+    prog.forEach(function(i){ linhaSku(i, true); });
+    info.n = prog.length;
+    xvar.forEach(function(i){ linhaSku(i, false); });
+    const fimBlocos = L.length;                        // última linha de bloco (1-based)
+    telas.forEach(function(i){ linhaSku(i, false); });
+    const fimTelas = L.length;
+    const r0 = info.primeira, rP = info.primeira + info.n - 1;
+    let r = L.length + 1;
+    L.push(["Total blocos"]);
+    ["B", "C", "D"].forEach(function(cl, k){ extras.push({ c: 1 + k, r: r, cell: { t: "n", f: "SUM(" + cl + r0 + ":" + cl + fimBlocos + ")" } }); });
+    if(info.n){
+      extras.push({ c: 5, r: r, cell: { t: "n", f: "SUM(F" + r0 + ":F" + rP + ")" } });
+      extras.push({ c: 6, r: r, cell: { t: "n", f: "SUM(G" + r0 + ":G" + rP + ")" } });
+    }
+    if(telas.length){
+      r = L.length + 1;
+      L.push(["Total telas"]);
+      ["B", "C", "D"].forEach(function(cl, k){ extras.push({ c: 1 + k, r: r, cell: { t: "n", f: "SUM(" + cl + (fimBlocos + 1) + ":" + cl + fimTelas + ")" } }); });
+    }
+    L.push([NOTA_PALLET]);
+  } else {
+    L.push(["Sem quantitativo publicado: este pavimento não tem elevação no ConstruCode."]);
+  }
+  L.push([]);
   L.push(["LEVANTE · ÁREA (m²)"]);
   if(q.area.total > 0){
     L.push(["Previsto (m²)", m2(q.area.total)]);
@@ -79,25 +163,6 @@ function linhasPavimento(q){
     L.push(["Sem área de projeto: pavimento sem elevação publicada no ConstruCode."]);
   }
   if(q.area.total > 0 && q.area.sem) L.push(["Peças sem área (fora da conta)", q.area.sem]);
-  L.push([]);
-  L.push(["LEVANTE · MATERIAL"]);
-  if(q.ordem.length){
-    const comPallet = temPallets();
-    const saldoDe = function(i){ return (q.previsto[i] || 0) - Math.round(q.assentado[i] || 0); };
-    const pal = function(i){ const p = palletsDe(saldoDe(i), i); return p === null ? "—" : p; };
-    L.push(["SKU", "Previsto (un)", "Estimado assentado (un)", "Saldo (un)"].concat(comPallet ? ["Pallets a subir"] : []));
-    for(const i of q.ordem){
-      const p = q.previsto[i], a = Math.round(q.assentado[i]);
-      L.push([est.skus[i], p, a, p - a].concat(comPallet ? [pal(i)] : []));
-    }
-    [["Total blocos", q.blocos], ["Total telas", q.telas]].forEach(function(t, k){
-      const p = soma(t[1], q.previsto), a = Math.round(soma(t[1], q.assentado));
-      L.push([t[0], p, a, p - a].concat(comPallet ? [k === 0 ? somaPallets(q.blocos, saldoDe).total : "—"] : []));
-    });
-    if(comPallet) L.push([NOTA_PALLET]);
-  } else {
-    L.push(["Sem quantitativo publicado: este pavimento não tem elevação no ConstruCode."]);
-  }
   linhasPorApartamento(q).forEach(function(l){ L.push(l); });
   L.push([]);
   L.push(["MARCAÇÃO · METRO LINEAR"]);
@@ -111,13 +176,12 @@ function linhasPavimento(q){
   if(q.linear.sem) L.push(["Peças sem comprimento (fora da conta)", q.linear.sem]);
   L.push([]);
   L.push([NOTA]);
-  return L;
+  return { L: L, extras: extras, info: info };
 }
 
 /* Saldo por apartamento: uma coluna por apartamento (os escolhidos,
-   ou todos se nenhum foi escolhido) e, na última, o conjunto sem
-   o conjunto (ou o pavimento) — que é o que está na tabela de cima.
-   Cada parede está em um apartamento só: as colunas somam o total. */
+   ou todos se nenhum foi escolhido) e, na última, o conjunto (ou o
+   pavimento). Cada parede está em um apartamento só. */
 function linhasPorApartamento(q){
   const todos = apartamentosDe(q.pav);
   if(!todos.length || !q.ordem.length) return [];
@@ -139,7 +203,7 @@ function linhasPorApartamento(q){
     const pal = function(qa, i){ const p = palletsDe(saldo(qa, i), i); return p === null ? "—" : p; };
     const palTot = function(qa){ return somaPallets(q.blocos, function(i){ return saldo(qa, i); }).total; };
     L.push([]);
-    L.push(["PALLETS POR APARTAMENTO · o que falta subir, arredondado para cima"]);
+    L.push(["PALLETS POR APARTAMENTO · o que falta subir, arredondado para cima, sem perda"]);
     L.push(["SKU"].concat(cols, [q.aptos.length ? "Conjunto" : "Pavimento"]));
     q.blocos.forEach(function(i){
       L.push([est.skus[i]].concat(qs.map(function(qa){ return pal(qa, i); }), [pal(q, i)]));
@@ -161,7 +225,7 @@ function linhasPorApartamento(q){
   return L;
 }
 
-/* resumo do prédio: uma coluna de previsto por pavimento */
+/* ---------- resumo do prédio ---------- */
 function linhasResumo(qs){
   const L = cabecalho("Material · prédio inteiro");
   const comMat = qs.filter(function(q){ return q.ordem.length; });
@@ -170,7 +234,7 @@ function linhasResumo(qs){
   const ids = {};
   comMat.forEach(function(q){ q.ordem.forEach(function(i){ ids[i] = true; }); });
   const ordem = Object.keys(ids).map(Number).sort(function(a,b){ return a-b; });
-  const ehBloco = function(i){ return String(est.skus[i]).indexOf("TELA") !== 0; };
+  const ehBloco = function(i){ return !ehTela(i); };
 
   L.push(["LEVANTE · MATERIAL (un)"]);
   L.push(["SKU"].concat(comMat.map(function(q){ return q.nome; }),
@@ -190,7 +254,7 @@ function linhasResumo(qs){
     const saldoPav = function(q, i){ return (q.previsto[i] || 0) - Math.round(q.assentado[i] || 0); };
     const pal = function(q, i){ const p = palletsDe(saldoPav(q, i), i); return p === null ? "—" : p; };
     L.push([]);
-    L.push(["PALLETS A SUBIR POR PAVIMENTO · arredondado para cima, SKU a SKU"]);
+    L.push(["PALLETS A SUBIR POR PAVIMENTO · arredondado para cima, SKU a SKU, sem perda"]);
     L.push(["SKU"].concat(comMat.map(function(q){ return q.nome; }), ["Total"]));
     blocosIds.forEach(function(i){
       const v = comMat.map(function(q){ return pal(q, i); });
@@ -232,17 +296,169 @@ function linhasResumo(qs){
   return L;
 }
 
-const LARG_PAV = [34, 14, 24, 12, 16, 12, 12, 26];
+/* ---------- Programação Entregas ---------- */
+/* Tudo o que é calculado é fórmula do Excel. O código só decide o
+   layout: quantas linhas de SKU (as da aba do pavimento) e quantas
+   colunas de entrega (4, ou mais se o total pedir mais caminhões). */
+function folhaProgramacao(XLSX, abaPav, info){
+  const ws = {};
+  const n = info.n, r0 = 11, rN = r0 + n - 1, T = rN + 1;
+  const CAP = 120;
+  const k = Math.max(4, Math.ceil(info.palletsEstimados / CAP));
+  const cE = 3, cUlt = cE + k - 1, cTot = cUlt + 1, cConf = cUlt + 2, cRef = cUlt + 3;
+  const L = col, A = "$" + "B$" + T;                   // $B$T
+  const QTD = "#,##0;(#,##0);-";
+  const aba = abaRef(abaPav);
+  const centro = { alignment: { horizontal: "center", vertical: "center" } };
+  let maxR = 1;
 
-function folha(XLSX, linhas, larguras){
-  const ws = XLSX.utils.aoa_to_sheet(linhas);
+  function put(c, r, cell, estilo){
+    const s = mescla(EST.base, estilo || null);
+    if(cell.s) Object.assign(s, mescla(s, cell.s));
+    const x = Object.assign({}, cell, { s: s });
+    if(c >= 1 && c <= cRef && !(s.alignment && s.alignment.horizontal)) x.s = mescla(x.s, centro);
+    ws[ref(c, r)] = x;
+    if(r > maxR) maxR = r;
+  }
+  const txt = function(v){ return { t: "s", v: v }; };
+  const num = function(v, z){ return { t: "n", v: v, z: z }; };
+  const fx  = function(f, z, t){ return { t: t || "n", f: f, z: z }; };
+  const azul = { font: fonte({ color: { rgb: COR.azul } }), fill: { patternType: "solid", fgColor: { rgb: COR.claro } } };
+  const verde = { font: fonte({ color: { rgb: COR.verde } }) };
+  const esq = { alignment: { horizontal: "left", vertical: "center" } };
+
+  /* título */
+  put(0, 1, txt("Programação de entregas · " + abaPav), EST.titulo);
+  put(0, 2, txt("Villa Ninita · Poço da Panela · emitido em " + dataBR(hojeISO()) + " · azul = editável, verde = vem da aba " + abaPav), EST.sub);
+
+  /* 1. entradas */
+  const hoje = new Date(hojeISO() + "T12:00:00Z");
+  const seg = new Date(hoje); seg.setUTCDate(hoje.getUTCDate() + ((8 - hoje.getUTCDay()) % 7 || 7));   // próxima segunda
+  const serial = Math.round((Date.UTC(seg.getUTCFullYear(), seg.getUTCMonth(), seg.getUTCDate()) - Date.UTC(1899, 11, 30)) / 86400000);
+  put(0, 3, txt("Capacidade por caminhão (pallets)"), esq);       put(1, 3, num(CAP, QTD), azul);
+  put(0, 4, txt("Data da 1ª entrega"), esq);                      put(1, 4, num(serial, "[$-416]ddd dd/mm/yyyy"), azul);
+  put(0, 5, txt("Dias entre 1ª e 2ª entrega da semana"), esq);    put(1, 5, num(3, "0"), azul);
+  put(2, 5, txt("seg→qui = 3; dias seguidos = 1"), mescla(EST.sub, esq));
+
+  /* 2. resumo */
+  put(0, 6, txt("Total de pallets a entregar"), esq);             put(1, 6, fx("B" + T, QTD));
+  put(0, 7, txt("Nº de caminhões"), esq);                         put(1, 7, fx("ROUNDUP(B6/B3,0)", "0"));
+  put(0, 8, txt("Semanas de entrega (2 entregas/semana)"), esq);  put(1, 8, fx("ROUNDUP(B7/2,0)", "0"));
+  put(3, 4, txt("Espaço livre no último caminhão (pallets)"), mescla(esq, { font: fonte({ bold: true }) }));
+  put(6, 4, fx("B3-(B" + T + "-SUMPRODUCT(ROUND(B" + r0 + ":B" + rN + "*MIN((B7-1)*B3,B" + T + ")/B" + T + ",0)))", QTD),
+      { font: fonte({ bold: true }) });
+
+  /* 3. cabeçalho */
+  for(let c = cE; c <= cUlt; c++){
+    put(c, 9, num(c - cE + 1, '"Entrega "0'), { font: fonte({ bold: true, color: { rgb: COR.marca } }) });
+    const D = L(c);
+    put(c, 10, fx('IF(' + D + '$9>$B$7,"",$B$4+INT((' + D + '$9-1)/2)*7+MOD(' + D + '$9-1,2)*$B$5)', "[$-416]ddd dd/mm"), EST.cab);
+  }
+  put(0, 10, txt("SKU"), EST.cabEsq);
+  put(1, 10, txt("Pallets (c/ 20% perda)"), EST.cab);
+  put(2, 10, txt("Peso no total"), EST.cab);
+  put(cTot, 10, txt("Total programado"), EST.cab);
+  put(cConf, 10, txt("Confere"), EST.cab);
+  put(cRef, 10, txt("Reforço no último caminhão"), EST.cab);
+
+  /* 4. linhas por SKU */
+  const J = L(cRef), H = L(cTot), UL = L(cUlt);
+  for(let r = r0; r <= rN; r++){
+    const rPav = info.primeira + (r - r0);
+    put(0, r, fx(aba + "!A" + rPav, null, "s"), mescla(verde, esq));
+    put(1, r, fx(aba + "!F" + rPav, QTD), verde);
+    put(2, r, fx("B" + r + "/" + A, "0.0%"));
+    for(let c = cE; c <= cUlt; c++){
+      const D = L(c);
+      put(c, r, fx('IF(' + D + '$9>$B$7,"",ROUND($B' + r + '*MIN(' + D + '$9*$B$3,' + A + ')/' + A + ',0)-ROUND($B' + r +
+        '*MIN((' + D + '$9-1)*$B$3,' + A + ')/' + A + ',0)+IF(' + D + '$9=$B$7,$' + J + r + ',0))', QTD));
+    }
+    put(cTot, r, fx("SUM(D" + r + ":" + UL + r + ")", QTD));
+    put(cConf, r, fx('IF(' + H + r + '=B' + r + '+' + J + r + ',"OK","Revisar")', null, "s"));
+    put(cRef, r, fx("ROUNDDOWN($C" + r + "*$G$4,0)+IF($B" + r + "=MAX($B$" + r0 + ":$B$" + rN + "),$G$4-SUMPRODUCT(ROUNDDOWN($C$" + r0 +
+      ":$C$" + rN + "*$G$4,0)),0)", QTD));
+  }
+
+  /* 5. totais e validação */
+  put(0, T, txt("Total por caminhão"), mescla(EST.total, esq));
+  put(1, T, fx("SUM(B" + r0 + ":B" + rN + ")", QTD), EST.total);
+  put(2, T, fx("SUM(C" + r0 + ":C" + rN + ")", "0.0%"), EST.total);
+  for(let c = cE; c <= cUlt; c++){
+    const D = L(c);
+    put(c, T, fx('IF(' + D + '$9>$B$7,"",SUM(' + D + r0 + ':' + D + rN + '))', QTD), EST.total);
+    put(c, T + 1, fx('IF(' + D + '$9>$B$7,"",' + D + T + '/$B$3)', "0.0%"));
+    put(c, T + 2, fx('IF(' + D + '$9>$B$7,"",IF(' + D + T + '>$B$3,"Excede","OK"))', null, "s"));
+  }
+  put(cTot, T, fx("SUM(" + H + r0 + ":" + H + rN + ")", QTD), EST.total);
+  put(cConf, T, fx('IF(' + H + T + '=B' + T + '+' + J + T + ',"OK","Revisar")', null, "s"), EST.total);
+  put(cRef, T, fx("SUM(" + J + r0 + ":" + J + rN + ")", QTD), EST.total);
+  put(0, T + 1, txt("Ocupação do caminhão"), esq);
+  put(0, T + 2, txt("Limite de carga"), esq);
+
+  /* 7. nota */
+  put(0, T + 4, txt(NOTA_PROG + abaPav + "; XVAR e telas não vão em pallet."), EST.nota);
+  for(let c = 1; c <= cRef; c++) put(c, T + 4, txt(""), EST.nota);
+
+  ws["!ref"] = "A1:" + ref(cRef, maxR);
+  ws["!merges"] = [{ s: { r: T + 3, c: 0 }, e: { r: T + 3, c: cRef } }];
+  ws["!cols"] = [{ wpx: 307 }].concat(new Array(cRef).fill(0).map(function(){ return { wpx: 127 }; }));
+  const rows = []; rows[9] = { hpt: 34 }; rows[T + 3] = { hpt: 64 };
+  ws["!rows"] = rows;
+  return ws;
+}
+
+/* ---------- montagem e estilo das abas comuns ---------- */
+const LARG_PAV = [34, 14, 24, 12, 16, 22, 20, 26];
+
+/* aplica o visual do sistema: título, seções, cabeçalhos e totais */
+function estilizar(ws){
+  const linhas = {};
+  for(const r in ws){
+    if(r[0] === "!") continue;
+    const m = r.match(/^([A-Z]+)(\d+)$/);
+    (linhas[m[2]] = linhas[m[2]] || []).push(r);
+  }
+  for(const nr in linhas){
+    const a = ws["A" + nr], va = a && typeof a.v === "string" ? a.v : "";
+    let e = EST.base;
+    if(nr === "2") e = EST.titulo;
+    else if(nr === "1" || nr === "3") e = EST.sub;
+    else if(va === "SKU" || va === "Pavimento") e = EST.cab;
+    else if(/^Total/.test(va)) e = EST.total;
+    else if(va && va === va.toUpperCase() && /[A-Z]/.test(va) && va.length > 4) e = EST.secao;
+    else if(va.length > 90) e = EST.nota;
+    linhas[nr].forEach(function(r){
+      const c = ws[r];
+      c.s = mescla(e, c.s || null);
+      if(e === EST.cab && r.indexOf("A") === 0) c.s = mescla(c.s, { alignment: { horizontal: "left" } });
+    });
+  }
+}
+
+function folha(XLSX, linhas, larguras, extras){
+  const ws = XLSX.utils.aoa_to_sheet(linhas.map(function(l){ return l.map(function(v){ return v === null ? undefined : v; }); }));
+  (extras || []).forEach(function(x){
+    const s = x.cell.s; const c = Object.assign({}, x.cell); delete c.s;
+    ws[ref(x.c, x.r)] = c;
+    if(s) c.s = s;
+  });
   /* milhar com ponto, decimal com vírgula: o Excel aplica o
      separador do computador, o formato só diz quantas casas */
-  for(const ref in ws){
-    if(ref[0] === "!") continue;
-    const c = ws[ref];
-    if(c.t === "n") c.z = Number.isInteger(c.v) ? "#,##0" : (Math.round(c.v * 10) === c.v * 10 ? "#,##0.0" : "#,##0.00");
+  for(const r in ws){
+    if(r[0] === "!") continue;
+    const c = ws[r];
+    if(c.t === "n" && !c.z) c.z = c.f || Number.isInteger(c.v) ? "#,##0" : (Math.round(c.v * 10) === c.v * 10 ? "#,##0.0" : "#,##0.00");
   }
+  /* !ref precisa cobrir as células de fórmula acrescentadas */
+  const rng = XLSX.utils.decode_range(ws["!ref"] || "A1");
+  for(const r in ws){
+    if(r[0] === "!") continue;
+    const d = XLSX.utils.decode_cell(r);
+    if(d.r > rng.e.r) rng.e.r = d.r;
+    if(d.c > rng.e.c) rng.e.c = d.c;
+  }
+  ws["!ref"] = XLSX.utils.encode_range(rng);
+  estilizar(ws);
   ws["!cols"] = larguras.map(function(w){ return { wch: w }; });
   return ws;
 }
@@ -267,6 +483,7 @@ export async function exportarMaterial(escopo, botao){
   try {
     const XLSX = await carregarXlsx();
     const wb = XLSX.utils.book_new();
+    wb.Props = { Title: "Material de Alvenaria · Villa Ninita", Language: "pt-BR" };
     const usados = {};
     let arquivo;
 
@@ -276,17 +493,22 @@ export async function exportarMaterial(escopo, botao){
       const larg = [26].concat(new Array(nCols).fill(11), [15, 19, 11]);
       XLSX.utils.book_append_sheet(wb, folha(XLSX, linhasResumo(qs), larg), nomeAba("Resumo", usados));
       qs.forEach(function(q){
-        XLSX.utils.book_append_sheet(wb, folha(XLSX, linhasPavimento(q), LARG_PAV), nomeAba(q.nome, usados));
+        const p = linhasPavimento(q);
+        XLSX.utils.book_append_sheet(wb, folha(XLSX, p.L, LARG_PAV, p.extras), nomeAba(q.nome, usados));
       });
       arquivo = "Material_Alvenaria_Predio_" + hojeISO() + ".xlsx";
     } else {
       const sel = aptosAtivos(est.pav);
       const q = quantitativoMaterial(est.pav, sel);
-      XLSX.utils.book_append_sheet(wb, folha(XLSX, linhasPavimento(q), LARG_PAV), nomeAba(q.nome, usados));
+      const p = linhasPavimento(q);
+      const nome = nomeAba(q.nome, usados);
+      XLSX.utils.book_append_sheet(wb, folha(XLSX, p.L, LARG_PAV, p.extras), nome);
+      /* logo depois da aba do pavimento: a programação de entregas */
+      if(p.info.n) XLSX.utils.book_append_sheet(wb, folhaProgramacao(XLSX, nome, p.info), nomeAba("Programação Entregas", usados));
       arquivo = "Material_Alvenaria_" + est.pav + (sel.length ? "_" + sel.join("-") : "") + "_" + hojeISO() + ".xlsx";
     }
 
-    XLSX.writeFile(wb, arquivo, { compression: true });
+    XLSX.writeFile(wb, arquivo, { compression: true, cellStyles: true });
     diz("Planilha baixada: " + arquivo);
   } catch(e){
     diz(e.message || String(e), true);

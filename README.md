@@ -326,6 +326,27 @@ Dois botões geram um arquivo Excel (`.xlsx`):
   telas) e o metro linear da marcação (previsto, executado, falta).
   Os dois serviços vão sempre, qualquer que seja o escolhido na tela.
   Arquivo `Material_Alvenaria_TP01_2026-11-12.xlsx`.
+
+  Na aba do pavimento, a tabela de SKUs começa **sempre na linha 9**
+  (cabeçalho na 8): A SKU, B previsto, C estimado assentado,
+  D saldo (`=B−C`), E blocos por pallet (azul, editável; família 19 em
+  branco até o almoxarifado informar), F **pallets c/ 20% de perda**
+  (`=ROUNDUP(D×1,2÷E;0)`), G pallets sem perda. Os blocos que vão em
+  pallet vêm primeiro e contíguos; depois XVAR; depois telas.
+
+  Logo depois vem a aba **Programação Entregas**, 100% em fórmulas:
+  entradas em azul (capacidade do caminhão = 120, data da 1ª entrega =
+  próxima segunda, dias entre a 1ª e a 2ª entrega da semana = 3),
+  links para a aba do pavimento em verde, datas das entregas por
+  fórmula, cada caminhão levando cada SKU na proporção do seu peso
+  (cálculo acumulado, para não perder pallet no arredondamento), e o
+  espaço livre do último caminhão completado com reforço pelo peso de
+  uso. São 4 colunas de entrega, ou mais se o total pedir mais
+  caminhões. Validações: *Confere* por SKU e *Limite de carga* por
+  caminhão. Limite conhecido da regra: como cada SKU é arredondado
+  sozinho, um caminhão intermediário pode passar da capacidade por
+  poucos pallets (no 1o Tipo, o 2º caminhão sai com 123) — o *Limite
+  de carga* acusa "Excede".
 - **Exportar prédio inteiro** — uma aba *Resumo* com cada SKU numa
   linha e um pavimento por coluna, mais previsto total, assentado e
   saldo; a área do levante e o metro linear de todos os pavimentos; e
