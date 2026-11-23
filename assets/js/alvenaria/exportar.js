@@ -489,6 +489,62 @@ function folha(XLSX, linhas, larguras, extras){
   return ws;
 }
 
+/* ---------- resultado guardado junto com a fórmula ----------
+   Excel no celular, pré-visualização do WhatsApp/Drive e Excel em
+   modo protegido NÃO recalculam: mostram só o valor guardado na
+   célula. Sem ele, toda fórmula aparece em branco. Aqui cada fórmula
+   é calculada (HyperFormula, compatível com as funções do Excel) e o
+   resultado vai junto; a fórmula continua lá, e o Excel do computador
+   recalcula ao abrir (fullCalcOnLoad). */
+const HF_URL = "https://cdn.jsdelivr.net/npm/hyperformula@2.6.2/dist/hyperformula.full.min.js";
+let carregandoHF = null;
+function carregarHF(){
+  if(window.HyperFormula) return Promise.resolve(window.HyperFormula);
+  if(!carregandoHF){
+    carregandoHF = new Promise(function(ok, falha){
+      const s = document.createElement("script");
+      s.src = HF_URL; s.async = true; s.crossOrigin = "anonymous";
+      s.onload = function(){ window.HyperFormula ? ok(window.HyperFormula) : falha(new Error("calculadora incompleta")); };
+      s.onerror = function(){ carregandoHF = null; s.remove(); falha(new Error("Não deu para baixar a calculadora de fórmulas. Confira a internet.")); };
+      document.head.appendChild(s);
+    });
+  }
+  return carregandoHF;
+}
+
+async function gravarResultados(XLSX, wb){
+  let HF;
+  try { HF = await carregarHF(); } catch(e){ return; }   // sem ela, o arquivo ainda sai com as fórmulas
+  const folhas = {};
+  wb.SheetNames.forEach(function(n){
+    const ws = wb.Sheets[n], d = XLSX.utils.decode_range(ws["!ref"] || "A1"), a = [];
+    for(let r = 0; r <= d.e.r; r++){
+      const l = [];
+      for(let c = 0; c <= d.e.c; c++){
+        const x = ws[XLSX.utils.encode_cell({ r: r, c: c })];
+        l.push(!x ? null : (x.f ? "=" + x.f : (x.v === "" || x.v === undefined ? null : x.v)));
+      }
+      a.push(l);
+    }
+    folhas[n] = a;
+  });
+  const hf = HF.buildFromSheets(folhas, { licenseKey: "gpl-v3", useArrayArithmetic: true });
+  wb.SheetNames.forEach(function(n){
+    const ws = wb.Sheets[n], id = hf.getSheetId(n);
+    for(const ref in ws){
+      if(ref[0] === "!" || !ws[ref].f) continue;
+      const d = XLSX.utils.decode_cell(ref);
+      const v = hf.getCellValue({ sheet: id, row: d.r, col: d.c });
+      if(v === null || v === undefined){ ws[ref].t = "s"; ws[ref].v = ""; }
+      else if(typeof v === "number"){ ws[ref].t = "n"; ws[ref].v = v; }
+      else if(typeof v === "boolean"){ ws[ref].t = "b"; ws[ref].v = v; }
+      else if(typeof v === "string"){ ws[ref].t = "s"; ws[ref].v = v; }
+      /* erro de fórmula: deixa sem valor, o Excel mostra o erro ao recalcular */
+    }
+  });
+  hf.destroy();
+}
+
 function nomeAba(nome, usados){
   let n = String(nome).replace(/[\\/\?\*\[\]:]/g, "-").slice(0, 31) || "Pavimento";
   let k = 2, base = n;
@@ -534,6 +590,9 @@ export async function exportarMaterial(escopo, botao){
       arquivo = "Material_Alvenaria_" + est.pav + (sel.length ? "_" + sel.join("-") : "") + "_" + hojeISO() + ".xlsx";
     }
 
+    diz("Calculando as fórmulas…");
+    await gravarResultados(XLSX, wb);
+    wb.Workbook = Object.assign({}, wb.Workbook || {}, { CalcPr: { fullCalcOnLoad: true } });
     XLSX.writeFile(wb, arquivo, { compression: true, cellStyles: true });
     diz("Planilha baixada: " + arquivo);
   } catch(e){
