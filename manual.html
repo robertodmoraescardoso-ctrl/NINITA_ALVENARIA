@@ -104,7 +104,7 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--borda);color:
     <li><a href="#prazos">Planejar e prazos</a></li>
     <li><a href="#equipes">Equipes e produtividade</a></li>
     <li><a href="#material">Material e pallets</a></li>
-    <li><a href="#estoque">Estoque: lançamentos</a></li>
+    <li><a href="#estoque">Estoque: lançamentos e kanban</a></li>
     <li><a href="#ler">Estoque: como ler os números</a></li>
     <li><a href="#regras">Regras que não podem falhar</a></li>
     <li><a href="#problemas">Quando algo não bate</a></li>
@@ -138,7 +138,7 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--borda);color:
       <tr><td><b>Guincho subiu material</b></td><td>Almoxarife</td><td>Lançar o <b>Envio para o andar</b>, com o pavimento e o apartamento de destino.</td></tr>
       <tr><td><b>Fim de cada dia</b></td><td>Apontador</td><td><b>Apontar execução</b> de cada parede trabalhada: % acumulado, dias e equipe.</td></tr>
       <tr><td><b>Sexta-feira, 16h</b></td><td>Almoxarife</td><td><b>Contagem física</b> do almoxarifado, começando pelos itens A da curva ABC. Antes, conferir se os apontamentos da semana estão em dia.</td></tr>
-      <tr><td><b>Segunda-feira</b></td><td>Engenharia</td><td>Olhar <b>Prazos</b>, <b>cobertura</b> do estoque e o <b>Material por apartamento</b>; programar o guincho da semana e o pedido de compra.</td></tr>
+      <tr><td><b>Segunda-feira</b></td><td>Engenharia</td><td>Olhar o <b>Kanban de reposição</b> (coluna Pedir) e registrar o pedido; olhar <b>Prazos</b>, <b>cobertura</b> do estoque e o <b>Material por apartamento</b>; programar o guincho da semana e o pedido de compra.</td></tr>
       <tr><td><b>Apartamento concluído</b></td><td>Encarregado</td><td>Recolher a sobra do apartamento e lançar a <b>Devolução do andar</b>. Só aí o “acima do projeto” daquele apartamento é final.</td></tr>
       <tr><td><b>Quebra</b></td><td>Almoxarife</td><td>Bloco quebrado na descarga ou no almoxarifado: lançar <b>Quebra / perda</b> com o motivo.</td></tr>
     </tbody>
@@ -239,6 +239,20 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--borda);color:
   <p>Em envio, devolução, quebra e contagem há a coluna <b>Avulsos</b>: os blocos soltos de um pallet aberto. Exemplo: 12 pallets fechados e um aberto com 7 blocos → <b>Pallets 12</b>, <b>Avulsos 7</b>. Não deixe de contar o pallet aberto: no 14×19×39 cada pallet esquecido são 20 blocos de erro.</p>
   <h3>Lançou errado?</h3>
   <p>Em <b>Lançamentos</b>, no fim da página, toque no <b>×</b> e depois em <b>Excluir?</b>, e lance de novo certo.</p>
+  <h3>Kanban de reposição: quando pedir</h3>
+  <p>No alto da aba Estoque, o quadro <b>Kanban de reposição</b> mostra cada bloco numa de quatro colunas:</p>
+  <div class="rolar"><table>
+    <thead><tr><th>Coluna</th><th>O que quer dizer</th><th>O que fazer</th></tr></thead>
+    <tbody>
+      <tr><td><b>Pedir</b></td><td>Saldo do almoxarifado + o que já está pedido ficou abaixo do <b>ponto de pedido</b> (2 semanas de consumo: 1 de prazo do fornecedor + 1 de segurança).</td><td>Tocar em <b>Montar pedido · caminhão de 120</b>, conferir, e <b>Registrar pedido</b>.</td></tr>
+      <tr><td><b>Pedido feito</b></td><td>Pedido registrado, aguardando o fornecedor.</td><td>Quando o fornecedor confirmar a saída, tocar em <b>Em trânsito →</b>.</td></tr>
+      <tr><td><b>Em trânsito</b></td><td>Material a caminho. Fica vermelho “atrasado” se passar da previsão de chegada.</td><td>Ao chegar, lançar o <b>Recebimento</b> normalmente: o cartão sai sozinho.</td></tr>
+      <tr><td><b>OK</b></td><td>Estoque cobre o ponto de pedido, ou o pedido já está a caminho (“aguardando N pal”).</td><td>Nada.</td></tr>
+    </tbody>
+  </table></div>
+  <p><b>Montar pedido</b> calcula quanto pedir de cada bloco para repor até 3 semanas de consumo e completa até <b>caminhão fechado de 120 pallets</b> com os blocos mais consumidos. Dá para mudar as quantidades antes de registrar; se o total não fechar caminhão, aparece um aviso. Preencha a previsão de chegada (já vem com 7 dias) e, na observação, o fornecedor e o número do pedido.</p>
+  <p>Chegada parcial: lance o recebimento do que chegou; o cartão continua mostrando só o que falta (“46 pal em aberto de 146”). Pedido errado: toque no <b>×</b> do cartão e depois em <b>Cancelar?</b>.</p>
+  <div class="quadro alerta"><p>O consumo semanal vem do <b>ritmo de levante apontado nas últimas 4 semanas</b>. Bloco sem levante recente não entra em pedido. Por isso o apontamento em dia é o que faz o kanban funcionar.</p></div>
 </section>
 
 <section id="ler">

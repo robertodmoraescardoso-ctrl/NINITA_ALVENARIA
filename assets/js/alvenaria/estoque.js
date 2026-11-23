@@ -1,5 +1,6 @@
 import { $, esc } from "../ui.js";
-import { apagarMovimento, gravarEstoque, lerApontamentos, lerEstoque } from "./nuvem.js";
+import { apagarMovimento, atualizarPedido, cancelarPedido, gravarEstoque, gravarPedidos, lerApontamentos, lerEstoque, lerPedidos } from "./nuvem.js";
+import { atualizarTotalMontagem, htmlKanban, pedidosAbertos, situacao } from "./kanban.js";
 import { apartamentosDe, est, hojeISO, nf, ni, porPallet } from "./modelo.js";
 
 /* ------------------------------------------------------------
@@ -35,6 +36,8 @@ let movs = null, aponts = null, erroLeitura = "";
 let modo = "entrada";
 let aguardando = "";
 let destPav = "", destApto = "";
+/* kanban de reposição: pedidos (migração 008) e o painel de montagem */
+let pedidos = [], erroPedidos = "", montando = false, armadoKb = "";
 
 function skusEstoque(){
   const r = [];
@@ -187,6 +190,9 @@ export async function desenharEstoque(recarregar){
       const r = await Promise.all([lerEstoque(), lerApontamentos()]);
       movs = r[0]; aponts = r[1]; erroLeitura = "";
     } catch(e){ movs = null; erroLeitura = (e && e.message) || String(e); }
+    /* pedidos à parte: sem a migração 008 o resto do estoque funciona */
+    try { pedidos = await lerPedidos(); erroPedidos = ""; }
+    catch(e){ pedidos = []; erroPedidos = (e && e.message) || String(e); }
   }
   pintar();
 }
@@ -230,11 +236,57 @@ function pintar(){
       ind(recebido > 0 ? nf(quebrado / recebido * 100, 1) + "%" : "—", "Quebra",
           ni(quebrado) + " blocos lançados como perda") +
     "</div>" +
+    blocoKanban(c) +
     (est.podeGravar ? blocoLancar(c) : "") +
     tabelaAlmox(c) +
     tabelaEscopos(c) +
     tabelaABC(abc) +
     historico();
+}
+
+function blocoKanban(c){
+  if(erroPedidos){
+    return '<h2 class="alv-titulo">Kanban de reposição</h2><div class="alv-msg erro">Os pedidos não puderam ser lidos' +
+      (/alvenaria_pedidos/.test(erroPedidos) ? ": falta rodar a migração <b>008_pedidos.sql</b> no Supabase." : ": " + esc(erroPedidos)) + "</div>";
+  }
+  const ab = pedidosAbertos(pedidos, movs);
+  return htmlKanban(situacao(c.almox, ab), ab, { podeGravar: est.podeGravar, montando: montando, armado: armadoKb });
+}
+
+async function registrarPedido(botao){
+  const msg = $("#alvKbMsg");
+  const diz = function(t, erro){ if(msg){ msg.textContent = t; msg.classList.toggle("erro", !!erro); } };
+  const data = ($("#alvKbData") && $("#alvKbData").value) || "";
+  const prev = ($("#alvKbPrev") && $("#alvKbPrev").value) || "";
+  if(!data || data > hojeISO()){ diz("Confira a data do pedido.", true); return; }
+  if(prev && prev < data){ diz("A previsão de chegada está antes do pedido.", true); return; }
+  const obs = (($("#alvKbObs") && $("#alvKbObs").value) || "").trim();
+  const linhas = []; let invalido = "";
+  Array.prototype.forEach.call(document.querySelectorAll("#alvEstoqueTela [data-kbsku]"), function(inp){
+    const t = String(inp.value).trim(); if(t === "") return;
+    const n = Number(t);
+    if(!Number.isInteger(n) || n < 0){ invalido = inp.dataset.kbsku; return; }
+    if(n === 0) return;
+    linhas.push({ data: data, sku: inp.dataset.kbsku, pallets: n, blocos_por_pallet: Number(inp.dataset.kbbpp), previsao: prev, observacao: obs });
+  });
+  if(invalido){ diz(invalido + ": use pallets inteiros.", true); return; }
+  if(!linhas.length){ diz("Nenhum pallet no pedido.", true); return; }
+  botao.disabled = true; diz("Gravando…");
+  try {
+    await gravarPedidos(linhas);
+    montando = false;
+    await desenharEstoque(true);
+  } catch(e){ botao.disabled = false; diz("Não gravou: " + ((e && e.message) || e), true); }
+}
+
+async function moverPedido(id, acao){
+  if(acao === "cancelar" && armadoKb !== String(id)){ armadoKb = String(id); pintar(); return; }
+  armadoKb = "";
+  try {
+    if(acao === "cancelar") await cancelarPedido(id);
+    else await atualizarPedido(id, { status: "transito" });
+    await desenharEstoque(true);
+  } catch(e){ pintar(); alert("Não foi possível: " + ((e && e.message) || e)); }
 }
 
 function blocoLancar(c){
@@ -459,8 +511,13 @@ async function excluir(id){
 document.addEventListener("click", function(ev){
   const tela = $("#alvEstoqueTela");
   if(!tela || !tela.contains(ev.target)) return;
-  const b = ev.target.closest("[data-estmodo],#alvEstLancar,#alvEstSugerir,[data-estdel]");
-  if(!b){ if(aguardando){ aguardando = ""; pintar(); } return; }
+  const b = ev.target.closest("[data-estmodo],#alvEstLancar,#alvEstSugerir,[data-estdel],#alvKbMontar,#alvKbFechar,#alvKbRegistrar,[data-kbtransito],[data-kbcancelar]");
+  if(!b){ if(aguardando || armadoKb){ aguardando = ""; armadoKb = ""; pintar(); } return; }
+  if(b.id === "alvKbMontar"){ montando = true; pintar(); atualizarTotalMontagem(); return; }
+  if(b.id === "alvKbFechar"){ montando = false; pintar(); return; }
+  if(b.id === "alvKbRegistrar"){ registrarPedido(b); return; }
+  if(b.dataset.kbtransito){ moverPedido(b.dataset.kbtransito, "transito"); return; }
+  if(b.dataset.kbcancelar){ moverPedido(b.dataset.kbcancelar, "cancelar"); return; }
   if(b.dataset.estmodo){ modo = b.dataset.estmodo; aguardando = ""; pintar(); return; }
   if(b.id === "alvEstLancar"){ lancar(b); return; }
   if(b.id === "alvEstSugerir"){ sugerir(); return; }
@@ -487,6 +544,7 @@ document.addEventListener("change", function(ev){
 document.addEventListener("input", function(ev){
   const t = ev.target;
   if(!t || !t.dataset) return;
+  if(t.dataset.kbsku !== undefined){ atualizarTotalMontagem(); return; }
   if(t.dataset.estsku !== undefined) atualizarPrevia(t.dataset.estsku);
   else if(t.dataset.estav !== undefined) atualizarPrevia(t.dataset.estav);
 });

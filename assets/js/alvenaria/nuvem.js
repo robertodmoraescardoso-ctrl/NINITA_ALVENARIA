@@ -290,3 +290,41 @@ export async function apagarMovimento(id){
   if(!r.data || !r.data.length) throw new Error("O lançamento não foi encontrado ou já tinha sido excluído.");
   return r.data[0];
 }
+
+/* ---------- pedidos de blocos — kanban de reposição (migração 008) ---------- */
+
+export async function lerPedidos(){
+  const r = await sb.from("alvenaria_pedidos")
+    .select("id,data,sku,pallets,blocos_por_pallet,status,previsao,observacao,autor,criado_em")
+    .is("excluido_em", null)
+    .order("data", { ascending:true })
+    .order("criado_em", { ascending:true });
+  if(r.error) throw r.error;
+  return r.data || [];
+}
+
+export async function gravarPedidos(linhas){
+  const autor = (usuario && usuario.email) || "";
+  const r = await sb.from("alvenaria_pedidos")
+    .insert(linhas.map(function(l){
+      return { data: l.data, sku: l.sku, pallets: l.pallets, blocos_por_pallet: l.blocos_por_pallet,
+               status: "pedido", previsao: l.previsao || null, observacao: l.observacao || "", autor: autor };
+    }))
+    .select("id");
+  if(r.error) throw r.error;
+  return r.data || [];
+}
+
+export async function atualizarPedido(id, campos){
+  const r = await sb.from("alvenaria_pedidos")
+    .update(Object.assign({}, campos, { atualizado_em: new Date().toISOString() }))
+    .eq("id", id).is("excluido_em", null).select("id");
+  if(r.error) throw r.error;
+  if(!r.data || !r.data.length) throw new Error("O pedido não foi encontrado.");
+  return r.data[0];
+}
+
+/* cancelar = exclusão lógica */
+export async function cancelarPedido(id){
+  return atualizarPedido(id, { excluido_em: new Date().toISOString() });
+}

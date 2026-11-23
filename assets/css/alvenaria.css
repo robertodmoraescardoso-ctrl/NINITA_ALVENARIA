@@ -368,3 +368,27 @@
 .alv-abc__barra{min-width:90px}
 .alv-abc__barra i{display:block;height:8px;border-radius:4px;background:var(--marca-clara)}
 @media (max-width:560px){ .alv-est-cab{grid-template-columns:1fr} }
+
+/* ---------- kanban de reposição ---------- */
+.alv-kb{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:8px}
+@media (max-width:820px){ .alv-kb{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:480px){ .alv-kb{grid-template-columns:1fr} }
+.alv-kb__col{background:var(--fundo-2);border:1px solid var(--borda);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.alv-kb__col--pedir{border-top:3px solid var(--st-atraso)}
+.alv-kb__col--feito{border-top:3px solid var(--st-andamento)}
+.alv-kb__col--transito{border-top:3px solid var(--marca-clara)}
+.alv-kb__col--ok{border-top:3px solid var(--st-ok)}
+.alv-kb__tit{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--texto-2)}
+.alv-kb__card{background:var(--fundo-3);border:1px solid var(--borda);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;font-size:13px}
+.alv-kb__card span,.alv-kb__card small{color:var(--texto-2)}
+.alv-kb__card--pedir{border-left:3px solid var(--st-atraso)}
+.alv-kb__card--atraso{border-left:3px solid var(--st-atraso)}
+.alv-kb__sug{color:var(--texto)!important;font-weight:700}
+.alv-kb__atraso{color:var(--st-atraso)!important;font-weight:700}
+.alv-kb__acoes{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.alv-kb__mini{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;border-bottom:1px solid var(--linha);padding:3px 0}
+.alv-kb__mini span{color:var(--texto-3);white-space:nowrap}
+.alv-kb__vazio{color:var(--texto-3);font-size:13px}
+.alv-kb__montar{margin-top:auto}
+.alv-kb__montagem{background:var(--fundo-2);border:1px solid var(--marca);border-radius:10px;padding:12px;margin:10px 0}
+.alv-kb__montagem h3{margin:0 0 8px;font-size:14px}

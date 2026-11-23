@@ -47,6 +47,7 @@ assets/
     paineis.js          indicadores, prazos, equipes e material
     exportar.js         planilha Excel do quantitativo de material
     estoque.js          estoque central: recebimento, contagem, consumo a mais, curva ABC
+    kanban.js           kanban de reposição: ponto de pedido e pedido em caminhão fechado
 migracoes/              scripts SQL do banco, numerados (rodar em ordem)
 ```
 
@@ -556,6 +557,34 @@ toques, como nos apontamentos. Ficam fora, por não terem número de
 pallet: família 19, bloco cortado XVAR e telas.
 
 Código: `assets/js/alvenaria/estoque.js`.
+
+### Kanban de reposição
+
+No alto da aba Estoque, um quadro com uma linha de cartões por bloco
+que vai em pallet, em quatro colunas: **Pedir**, **Pedido feito**,
+**Em trânsito** e **OK**. Regras combinadas com o Roberto em
+23/11/2026 (constantes `KB` em `assets/js/alvenaria/kanban.js`):
+
+- **Consumo semanal** = ritmo de levante das últimas 4 semanas (o
+  mesmo da cobertura).
+- **Ponto de pedido** = consumo semanal × 2 semanas (1 de prazo do
+  fornecedor + 1 de segurança). **Posição** = saldo do almoxarifado +
+  pedido em aberto. Posição abaixo do ponto → cartão em **Pedir**.
+- **Montar pedido** sugere repor até 3 semanas de consumo (prazo +
+  segurança + 1 semana de ciclo, para não pedir toda semana) e fecha
+  **caminhão de 120 pallets**, completando pelos blocos de maior
+  consumo (maior resto). Editável antes de registrar; avisa se o total
+  não fechar caminhão.
+- **Em aberto** = pedido − recebimentos do mesmo SKU lançados a partir
+  da data do pedido, na ordem dos pedidos. O cartão sai de Pedido
+  feito/Em trânsito sozinho quando o recebimento é lançado; chegada
+  parcial deixa só o resto em aberto. Previsão vencida → "atrasado".
+- Admin e apontador movem (Em trânsito, Cancelar); gestor vê.
+  Cancelar é exclusão lógica.
+
+Banco: tabela `alvenaria_pedidos` (migração `008_pedidos.sql`, rodada
+em 23/11/2026).
+
 
 ---
 
