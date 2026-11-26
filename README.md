@@ -215,8 +215,8 @@ começou** e **quando terminou**:
 
 | Campo | O que é |
 |---|---|
-| *Começou em* | o dia em que a equipe pegou aquele trecho |
-| *Terminou em* | o dia em que parou ali e foi medido |
+| *Este lançamento: de* | o dia em que a equipe pegou aquele trecho (conta os dias da equipe) |
+| *até* | o dia em que parou ali e foi medido. O início da parede é sempre o do 1º apontamento do serviço, fixo |
 
 Os dois vêm preenchidos com hoje, então quem fez tudo num dia só toca
 no botão e pronto. Mexer numa ponta arrasta a outra se elas se

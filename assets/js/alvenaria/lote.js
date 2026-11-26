@@ -146,9 +146,9 @@ export function abrirApontarLote(){
       "</div>" +
       '<div class="alv-grade" style="margin-top:10px">' +
         campoEquipe("alvLoteEquipe", "alvLoteEquipeOutra", "") +
-        '<label class="alv-campo"><span>Começou em</span>' +
+        '<label class="alv-campo"><span>Este lançamento: de</span>' +
           '<input id="alvLoteDataIni" type="date" value="' + hojeISO() + '" max="' + hojeISO() + '"></label>' +
-        '<label class="alv-campo"><span>Terminou em</span>' +
+        '<label class="alv-campo"><span>até</span>' +
           '<input id="alvLoteData" type="date" value="' + hojeISO() + '" max="' + hojeISO() + '"></label>' +
       "</div>" +
       '<div class="alv-msg" id="alvLoteDias">Um dia de trabalho.</div>' +

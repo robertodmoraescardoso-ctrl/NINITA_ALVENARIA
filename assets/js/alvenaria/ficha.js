@@ -132,6 +132,11 @@ function montar(w, carregando){
     : blocoApontamento(w) + blocoPlanejamento(w, pl, responsaveis)) +
 
   '<div class="alv-bloco-sec alv-ficha__pad"><h4>Histórico</h4>' +
+    (historico.length
+      ? '<div class="alv-fatos" style="margin-bottom:8px">' +
+          fato("Marcação iniciada", inicioDaParede("marcacao") ? dataCurta(inicioDaParede("marcacao")) : "—") +
+          fato("Levante iniciado", inicioDaParede("elevacao") ? dataCurta(inicioDaParede("elevacao")) : "—") +
+        "</div>" : "") +
     (!est.conectado ? '<div class="alv-msg">Entre na obra para ver os lançamentos desta parede.</div>'
      : carregando ? '<div class="alv-msg">Carregando lançamentos…</div>'
      : historico.length
@@ -168,6 +173,30 @@ function montar(w, carregando){
   ligarArrasteParaFechar();
 }
 
+/* Início da parede num serviço: o começo do PRIMEIRO apontamento
+   dela, e não o do último. Cada lançamento guarda o próprio
+   período (é ele que conta os dias de cada equipe), mas a parede
+   começou uma vez só — e essa data não muda com lançamentos novos. */
+function inicioDaParede(s){
+  let menor = "";
+  for(const l of historico){
+    if((l.servico === "marcacao" ? "marcacao" : "elevacao") !== s) continue;
+    const d = inicioDe(l);
+    if(d && (!menor || d < menor)) menor = d;
+  }
+  return menor;
+}
+
+function linhaInicio(s){
+  const d = inicioDaParede(s);
+  return d
+    ? '<div class="alv-msg" style="margin:0 0 8px"><b>' + esc(nomeServico(s)) +
+      (s === "marcacao" ? " iniciada em " : " iniciado em ") +
+      esc(dataCurta(d)) + "</b> · data fixa, do 1º apontamento.</div>"
+    : '<div class="alv-msg" style="margin:0 0 8px">' + esc(nomeServico(s)) +
+      " ainda sem apontamento: o início da parede será o “de” deste lançamento.</div>";
+}
+
 function fato(rotulo, valor){
   return '<div class="alv-fato"><div class="alv-fato__r">' + esc(rotulo) + '</div>' +
          '<div class="alv-fato__v">' + esc(valor) + "</div></div>";
@@ -196,6 +225,7 @@ function blocoApontamento(w){
         : "Pavimento sem elevação publicada: sem quantitativo, só dá para marcar concluída ou não.");
 
   return '<div class="alv-bloco-sec alv-ficha__pad"><h4>Apontar execução</h4>' + abas +
+    linhaInicio(s) +
     (tem
       ? '<div class="alv-pcts">' + [0,25,50,75,100].map(function(v){
             return '<button type="button" data-pct="' + v + '" aria-pressed="' + (p === v) + '">' + v + "%</button>";
@@ -213,8 +243,8 @@ function blocoApontamento(w){
         '<div class="alv-msg">' + semQuant + "</div>") +
     '<div class="alv-grade" style="margin-top:10px">' +
       campoEquipe("alvEquipe", "alvEquipeOutra", ultima) +
-      campo("Começou em", '<input id="alvDataIni" type="date" value="' + hojeISO() + '" max="' + hojeISO() + '">') +
-      campo("Terminou em", '<input id="alvData" type="date" value="' + hojeISO() + '" max="' + hojeISO() + '">') +
+      campo("Este lançamento: de", '<input id="alvDataIni" type="date" value="' + hojeISO() + '" max="' + hojeISO() + '">') +
+      campo("até", '<input id="alvData" type="date" value="' + hojeISO() + '" max="' + hojeISO() + '">') +
     "</div>" +
     '<div class="alv-msg" id="alvDias">Um dia de trabalho.</div>' +
     '<button type="button" class="alv-salvar" id="alvRegistrar">Registrar ' +
